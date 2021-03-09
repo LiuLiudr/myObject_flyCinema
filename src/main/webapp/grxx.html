@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html >
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>index</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+    <script src="js/jquery-3.3.1.js"></script>
+    <script src="js/getParameter.js"></script>
+    <script>
+        $(function () {
+            loadUser();
+        });
+        function loadUser(){
+            $("#xgmm").attr("style","font-size: 20px;color: #e4b9b9");
+            $("#ddxq").attr("style","font-size: 20px;color: #e4b9b9");
+            $("#grxx").attr("style","font-size: 20px;color: #blue");
+            $.post('/flyCinema/user/isLogin',{},function (date) {
+                if(date){
+                var li = '<div class="form-group">\n' +
+                        '<input type="text" id="uid" name="uid" hidden="hidden" value="'+date.uid+'">'+
+                    '                <label for="username">姓名：</label>\n' +
+                    '                <input type="text" class="form-control" id="username" name="username" readonly="readonly"  placeholder="请输入姓名" value="'+date.username+'" />\n' +
+                    '            </div>\n' +
+                    '            <div class="form-group">\n' +
+                    '                <label for="age">年龄：</label>\n' +
+                    '                <input type="text" class="form-control" id="age" name="age"  placeholder="请输入年龄" value="'+date.age+'"/>\n' +
+                    '            </div>\n' +
+                    '            <div class="form-group">\n' +
+                    '                <label for="email">邮箱：</label>\n' +
+                    '                <input type="text" class="form-control" id="email" name="email"  placeholder="请输入邮箱" value="'+date.email+'" />\n' +
+                    '            </div>\n' +
+                    '            <div class="form-group">\n' +
+                    '                <label for="birthday">生日：</label>\n' +
+                    '                <input type="date" class="form-control" id="birthday" name="birthday"  placeholder="请输入生日" value="'+date.birthday+'"/>\n' +
+                    '            </div>\n'+
+                    '<div class="form-group" style="text-align: center">\n' +
+                    '            <input class="btn btn-primary" type="submit" onclick="submituser()" value="提交" />\n' +
+                    '        </div>';
+                $("#doSome").html(li);
+                }else {
+                    alert("请先登录");
+                    location.href = "login.html";
+                }
+                },"json")
+        }
+        function submituser() {
+            var uid = $("#uid").val();
+            var age = $("#age").val();
+            var email = $("#email").val();
+            var birthday = $("#birthday").val();
+            $.post('/flyCinema/user/updateUser',{uid:uid,age:age,email:email,birthday:birthday},function (date) {
+                if (date){
+                    alert("修改成功");
+                }else {
+                    alert("修改失败");
+                }
+            },"json")
+        }
+        function changepwd() {
+            $("#xgmm").attr("style","font-size: 20px;color: blue");
+            $("#ddxq").attr("style","font-size: 20px;color: #e4b9b9");
+            $("#grxx").attr("style","font-size: 20px;color: #e4b9b9");
+
+            $.post('/flyCinema/user/isLogin',{},function (date) {
+                var li = '<div class="form-group">\n' +
+                    '<input type="text" id="uid" name="uid" hidden="hidden" value="'+date.uid+'">'+
+                    '                <label for="password">原密码：</label>\n' +
+                    '                <input type="text" class="form-control" id="password" name="password" readonly="readonly" value="'+date.password+'" />\n' +
+                    '            </div>'+
+                    '<div class="form-group">\n' +
+                    '                <label for="password1" >密码：</label>\n' +
+                    '                <input type="text" class="form-control" id="password1" name="password1"  placeholder="请输入密码"  value="" />\n' +
+                    '            </div>'+
+                    '<div class="form-group">\n' +
+                    '                <label for="payment">原支付密码：</label>\n' +
+                    '                <input type="text" class="form-control" id="payment" name="payment"  readonly="readonly"  value="'+date.payment+'" />\n' +
+                    '            </div>'+
+                    '<div class="form-group">\n' +
+                    '                <label for="payment1">支付密码：</label>\n' +
+                    '                <input type="text" class="form-control" id="payment1" name="payment1"  placeholder="请输入支付密码"  value="" />\n' +
+                    '            </div>'+
+                '<div class="form-group" style="text-align: center">\n' +
+                '            <input class="btn btn-primary" type="submit" onclick="submitpwd()" value="提交" />\n' +
+                '        </div>';
+                $("#doSome").html(li);
+            },"json")
+        }
+
+        function submitpwd() {
+            var uid = $("#uid").val();
+            var password1 = $("#password1").val();
+            var payment1 = $("#payment1").val();
+                $.post('/flyCinema/user/changePwd',{uid:uid,password1:password1,payment1:payment1},function (date) {
+                    if (date.flag){
+                        alert("修改成功");
+                        changepwd();
+                    }else {
+                        alert(date.errorMsg);
+                    }
+                },"json")
+
+            }
+
+        function formatDate(now) {
+
+            var year=now.getFullYear();
+
+            var month=now.getMonth()+1;
+
+            var date=now.getDate();
+
+            return year+"-"+month+"-"+date;
+
+        }
+        function myIndent() {
+            $("#xgmm").attr("style","font-size: 20px;color: #e4b9b9");
+            $("#ddxq").attr("style","font-size: 20px;color: #blue");
+            $("#grxx").attr("style","font-size: 20px;color: #e4b9b9");
+            var uid = $("#uid").val();
+            $.post('/flyCinema/Indent/findIndent',{uid:uid},function (date) {
+
+                var li ='';
+                for (var i = 0; i < date.length; i++) {
+                    var index = date[i].coord;
+                    var col = 0;
+                    var row = 0;
+                    if (index % 10 !== 0) {
+                         col = index % 10;
+                         row = parseInt((index / 10) +1);
+                    }else {
+                         col = 10;
+                         row = parseInt(index / 10);
+                    }
+                    var cli = '<div class="panel panel-default">\n' +
+        '            <div class="panel-heading">\n' +
+        '                <h4 class="panel-title"></h4>\n' +
+        '                <h4 style="margin-top: 10px;font-size: 15px">订单号:'+date[i].id+'</h4>\n' +
+        '            </div>\n' +
+        '            <div class="panel-body">\n' +
+        '                <div style="float: left">\n' +
+        '                    <img style="height: 90%;margin-left: 130px" src="'+date[i].movie.img+'">\n' +
+        '                <!--有订单号，电影名，地址，电影院名，具体场次，座位。-->\n' +
+        '                    <p style=" margin-top: 10px;text-align: center;color: pink;font-size: 18px">'+date[i].movie.name+'</p>\n' +
+        '                    <span >观影地址:'+date[i].schedule.cinema.address+'</span><br>\n' +
+        '                    <span style="font-size: 18px;font-family: Bahnschrift">'+date[i].schedule.cinema.name+'' +
+                        '&nbsp;<span>'+date[i].schedule.name+'&nbsp;'+row+'排'+col+'座</span></span>\n' +
+        '                </div>\n' +
+        '                <div style="float: right; padding-right: 100px; margin-top: 20px">\n' +
+        '                    <h4>观影时间：</h4><br>\n' +
+        '                    <p style="font-size: 22px">'+formatDate(new Date(date[i].schedule.date)) +'&nbsp;<span style="font-size: 17px">'+date[i].schedule.time+'</span></p><br>\n' +
+                        '                    <p style="font-size: 20px">'+date[i].schedule.language +'</p><br>\n' +
+                        '                    <p style="color: red;font-size: 30px">￥'+date[i].schedule.price +'</p><br>\n' +
+                        '                    <div style="color: red;font-size: 20px">影院评分:'+date[i].schedule.cinema.score+'</div>\n' +
+
+                        '                </div>\n' +
+        '            </div>\n' +
+        '        </div>'
+                    li += cli;
+                }
+                $("#doSome").html(li);
+
+            },'json');
+        }
+
+    </script>
+</head>
+<body>
+<div id="header"></div>
+<div class="container">
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row" style="margin-top: 20px">
+        <div class="col-md-3">
+            <br>
+
+            <br>
+            <a onclick="loadUser()" style="text-decoration: none" ><span id="grxx" style="font-size: 20px;color: #e4b9b9">个人信息</span></a>
+            <br>
+
+            <br>
+            <br>
+            <br>
+            <a onclick="myIndent()"  style="text-decoration: none"><span id="ddxq" style="font-size: 20px;color: #e4b9b9">订单详情</span></a>
+
+            <br>
+            <br>
+            <br>
+            <br>
+            <a onclick="changepwd()"  style="text-decoration: none"><span id="xgmm" style="font-size: 20px;color: #e4b9b9">修改密码</span></a>
+            <br>
+            <br>
+            <br>
+            <br><br>
+            <br>
+            <br>
+            <br><br>
+            <br>
+            <br>
+            <br><br>
+            <br>
+            <br>
+            <br><br>
+        </div>
+        <div class="col-xs-8" style="margin-left: 20px;margin-top: 50px"  id="doSome">
+
+        </div>
+    </div>
+
+</div>
+<hr size="1" width="100%" align="left" noshade>
+<div id="footer"></div>
+<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+<script src="js/jquery-3.3.1.js"></script>
+<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+<script src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/include.js"></script>
+</body>
+</html>

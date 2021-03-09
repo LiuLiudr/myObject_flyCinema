@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <script src="js/jquery-1.11.0.min.js"></script>
+    <title>Title</title>
+
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/login.css">
+
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+
+    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <link rel="stylesheet" href="css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.css">
+
+    <script>
+        $(function () {
+
+            //更新正在热映
+            $.ajax({
+                url: "/flyCinema/films/findHottestFilms",
+                data: {},
+                success: function (resultInfo) {
+                    var li = '';
+                    for (var i = 0; i < 8; i++) {
+                        li += '<div class="col-md-3" style="margin-top: 40px; margin-left: 10px; margin-right: 20px; padding-left: 0px; padding-right: 0px; width: 170px; height: 319.3px; box-shadow:3px 6px 20px 1px hsla(0, 0%, 25.1%, 0.47)">\n' +
+                            '    <div href="' + '/flyCinema/detals?mid=' + resultInfo.data[i].mid + '" style="width: 170px; height: 240px">\n' +
+                            '        <img width="100%" height="100%" src="' + resultInfo.data[i].img + '">\n' +
+                            '        <div style="margin-left: 5px; font-size: 12pt; position: relative;">\n' +
+                            '            <div style="height: 8px;"><div title="' + resultInfo.data[i].name + '" style=" height: 30px; overflow:hidden; text-overflow: ellipsis; font-size: 16pt; float: left; font-weight: bold">' + resultInfo.data[i].name + '</div></div><br/>\n' +
+                            '            <div style="margin-right: 7px; float: right; height: 22.85px;">' + '评分：' + resultInfo.data[i].score + '</div>\n' +
+                            '        </div>\n' +
+                            '    </div>\n' +
+                            '    <div style="background-color: #F0AD4E; ">\n' +
+                            '        <a style="width: 100%" class="btn btn-warning" href="' + '/flyCinema/details.html?mid=' + resultInfo.data[i].mid + '" role="button">去看</a>\n' +
+                            '    </div>' +
+                            '</div>';
+                    }
+                    $("#most_hot").html(li);
+                },
+                type: "get",
+                dataType: "json",
+                async: true
+            });
+
+            //更新即将上映
+            $.ajax({
+                url: "/flyCinema/films/findWillShowFilms",
+                data: {},
+                success: function (resultInfo) {
+                    var time = 8;
+                    if (resultInfo.data.length < time) {
+                        time = resultInfo.data.length;
+                    }
+                    var li = '';
+                    for (var i = 0; i < time; i++) {
+                        var date = new Date(resultInfo.data[i].date);
+                        $.ajax({
+                            url: "/flyCinema/films/dateFormat",
+                            data: {date: date},
+                            success: function (resultInfo) {
+                                date = resultInfo.data;
+                            },
+                            type: "get",
+                            dataType: "json",
+                            async: false,
+                        });
+                        li += '<div class="col-md-3" style=" margin-top: 40px; margin-left: 10px; margin-right: 20px; padding-left: 0px; padding-right: 0px; width: 170px; height: 327.3px; box-shadow:3px 6px 20px 1px hsla(0, 0%, 50.2%, 0.47)">\n' +
+                            '    <div href="' + '/flyCinema/detals?mid=' + resultInfo.data[i].mid + '" style="width: 170px; height: 240px">\n' +
+                            '        <img width="100%" height="100%" src="' + resultInfo.data[i].img + '">\n' +
+                            '        <div style="margin-left: 5px; font-size: 12pt; position: relative;">\n' +
+                            '            <div style="height: 8px;"><div title="' + resultInfo.data[i].name + '" style=" height: 30px; overflow:hidden; text-overflow: ellipsis; font-size: 16pt; float: left; font-weight: bold">' + resultInfo.data[i].name + '</div></div><br/>\n' +
+                            '            <div style="margin-right: 7px; float: right; height: 22.85px;">' + date + '上映</div>\n' +
+                            '        </div>\n' +
+                            '    </div>\n' +
+                            '    <div style=" ">\n' +
+                            '        <a style="width: 100%" class="btn btn-default" href="' + '/flyCinema/details.html?mid=' + resultInfo.data[i].mid + '" role="button">查看信息</a>\n' +
+                            '    </div>' +
+                            '</div>';
+                    }
+                    $("#will_show").html(li);
+                },
+                type: "get",
+                dataType: "json",
+                async: false,
+            });
+
+            //更新TOP
+            $.ajax({
+                url: "/flyCinema/films/findFilmsByScore",
+                data: {},
+                success: function (resultInfo) {
+                    var li = '';
+                    for (var i = 1; i < 6; i++) {
+                        if (i == 1) {
+                            li += '<tr style="background-color: #ffd070">\n' +
+                                '    <td>\n' +
+                                '        <h2 style="color: red">' + i + '</h2>\n' +
+                                '    </td>\n' +
+                                '    <td style="vertical-align:middle;">\n' +
+                                '        <h4><a href=/flyCinema/details.html?mid=' + resultInfo.data[i].mid + '>' + resultInfo.data[i].name + '</a>' + '</h4>\n' +
+                                '    </td>\n' +
+                                '    <td style="vertical-align:middle">\n' +
+                                '        <p style="font-weight: bold; font-size: 15pt; color: #d64129">' + resultInfo.data[i].score + '</p>\n' +
+                                '    </td>\n' +
+                                '</tr>';
+                        } else {
+                            li += '<tr>\n' +
+                                '    <td>\n' +
+                                '        <h3>' + i + '</h3>\n' +
+                                '    </td>\n' +
+                                '    <td style="vertical-align:middle;">\n' +
+                                '        <h4><a href=/flyCinema/details.html?mid=' + resultInfo.data[i].mid + '>' + resultInfo.data[i].name + '</a></h4>\n' +
+                                '    </td>\n' +
+                                '    <td style="vertical-align:middle">\n' +
+                                '        <p style="font-weight: bold; font-size: 15pt; color: #b92c28">' + resultInfo.data[i].score + '</p>\n' +
+                                '    </td>\n' +
+                                '</tr>';
+                        }
+                    }
+                    $("#Top_list").html(li);
+                },
+                type: "get",
+                dataType: "json",
+                async: true,
+            });
+
+            //更新最近上映
+            $.ajax({
+                url: "/flyCinema/films/findNewestFilmsByDate",
+                data: {},
+                success: function (resultInfo) {
+                    var li = '';
+                    for (var i = 1; i < 6; i++) {
+                        var date = new Date(resultInfo.data[i].date);
+                        $.ajax({
+                            url: "/flyCinema/films/dateFormat",
+                            data: {date: date},
+                            success: function (resultInfo) {
+                                date = resultInfo.data;
+                            },
+                            type: "get",
+                            dataType: "json",
+                            async: false,
+                        });
+                        li += '<tr>\n' +
+                              '    <td style="vertical-align:middle;">\n' +
+                              '        <h4><a href=/flyCinema/details.html?mid=' + resultInfo.data[i].mid + '>' + resultInfo.data[i].name + '</a></h4>\n' +
+                              '    </td>\n' +
+                              '    <td style="vertical-align:middle">\n' +
+                              '        <p>' + date + '</p>\n' +
+                              '    </td>\n' +
+                              '</tr>';
+                    }
+                    $("#newest_films").html(li);
+                },
+                type: "get",
+                dataType: "json",
+                async: true,
+            });
+        });
+    </script>
+
+</head>
+<body>
+<!--引入头部-->
+<div id="header"></div>
+
+<div class="container" style="margin-top: 30px; box-shadow:3px 14px 43px -2px hsla(0, 0%, 0%, 0.56); border: 16px solid #ffc900; padding-right: 0px; padding-left: 0px; ">
+    <div id="carousel-example-generic" class="carousel slide" data-ride="carousel">
+        <!-- Indicators -->
+        <ol class="carousel-indicators">
+            <li data-target="#carousel-example-generic" data-slide-to="0" class="active"></li>
+            <li data-target="#carousel-example-generic" data-slide-to="1"></li>
+            <li data-target="#carousel-example-generic" data-slide-to="2"></li>
+        </ol>
+
+        <!-- Wrapper for slides -->
+        <div class="carousel-inner" role="listbox">
+            <div class="item active">
+                <img src="img/index/big_ones/1.jpg" alt="...">
+                <div class="carousel-caption">
+                    信条
+                </div>
+            </div>
+            <div class="item">
+                <img src="img//index/big_ones/2.jpg" alt="...">
+                <div class="carousel-caption">
+                    我的女友是机器人
+                </div>
+            </div>
+            <div class="item">
+                <img src="img//index/big_ones/3.jpg" alt="...">
+                <div class="carousel-caption">
+                    八佰
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
+            <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+            <span class="sr-only">Previous</span>
+        </a>
+        <a class="right carousel-control" href="#carousel-example-generic" role="button" data-slide="next">
+            <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+            <span class="sr-only">Next</span>
+        </a>
+    </div>
+</div>
+
+
+<div class="container" >
+    <div class="row" style="margin-top: 40px">
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col-md-11">
+                    <div class="page-header">
+                        <h1 style="color: #ff4430">正在热映</h1>
+                    </div>
+                </div>
+                <div class="col-md-1" style="margin-top: 50px" ><a style="font-size: 13pt" href="/flyCinema/filmlist.html">更多</a></div>
+
+                <div id="most_hot" class="row" style="padding-left: 10px">
+
+
+<!--                    '<div class="col-md-3" style="margin-top: 40px">\n' +-->
+<!--                    '    <div href="' + '/flyCinema/detals?mid=' + resultInfo.data[i].mid + '" style="width: 170px; height: 240px">-->
+<!--                                <img width="100%" height="100%" src="' + resultInfo.data[i].img + '">-->
+<!--                                <div style=" font-size: 12pt; position: relative;">-->
+<!--                                        <div style="float: left; font-weight: bold">' + resultInfo.data[i].name + '</div><br/>-->
+<!--                                       <div style="float: right">' +'评分：'+ resultInfo.data[i].score + '</div>-->
+<!--                                    </div>-->
+<!--                            </div>-->
+<!--                    '    <div style="background-color: #F0AD4E; ">-->
+<!--                        '        <a style="width: 170px; height: 73.6px;" href="' + '/flyCinema/details.html?mid=' + resultInfo.data[i].mid + '" role="button">去看</a>\n' +-->
+<!--                        '    </div>' +-->
+<!--                    '</div>';-->
+
+
+                </div>
+
+            </div>
+
+        </div>
+        <div class="col-md-4" style="padding-top: 60px; padding-left: 40px">
+            <h2>评分榜</h2>
+            <table id="Top_list" class="table table-hover" >
+<!--                <tr>-->
+<!--                    <td>-->
+<!--                        <h3 style="color: red">1</h3>-->
+<!--                    </td>-->
+<!--                    <td style="vertical-align:middle;">-->
+<!--                        <h4>电影名</h4>-->
+<!--                    </td>-->
+<!--                    <td style="vertical-align:middle">-->
+<!--                        <p>票房</p>-->
+<!--                    </td>-->
+<!--                </tr>-->
+            </table>
+
+        </div>
+    </div>
+
+    <div style="margin-top: 100px"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col-md-11">
+                    <div class="page-header">
+                        <h1 style="color: #3EA0F4">即将上映</h1>
+                    </div>
+                </div>
+                <div class="col-md-1" style="margin-top: 50px" ><a style="font-size: 13pt" href="#">更多</a></div>
+
+                <div id="will_show" class="row" style="padding-left: 10px">
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+
+
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3" style="margin-top: 40px">-->
+<!--                        <div href="#" style="width: 170px; height: 240px">-->
+<!--                            <img width="100%" height="100%" src="img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg">-->
+
+<!--                            <div style=" font-size: 13pt; position: relative;">-->
+<!--                                <span style="float: left">电影名</span>-->
+<!--                                <span style="float: right">评分</span>-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+                </div>
+            </div>
+
+        </div>
+        <div class="col-md-4" style="padding-top: 60px; padding-left: 40px">
+            <h2>最近上映</h2>
+            <table id="newest_films" class="table table-hover">
+                <tr>
+                    <td>
+                        <h3 style="color: red">1</h3>
+                    </td>
+                    <td style="vertical-align:middle;">
+                        <h4>电影名</h4>
+                    </td>
+                    <td style="vertical-align:middle">
+                        <p>票房</p>
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+    </div>
+
+    <div style="margin-top: 100px"></div>
+
+
+</div>
+
+<!--引入尾部-->
+<div id="footer"></div>
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="js/jquery-1.11.0.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="js/bootstrap.min.js"></script>
+<!--导入布局js，共享header和footer-->
+<script type="text/javascript" src="js/include.js"></script>
+
+</body>
+</html>

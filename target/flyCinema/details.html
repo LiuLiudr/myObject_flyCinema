@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>详情页面</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <script src="js/jquery-1.11.0.min.js"></script>
+    <script>
+        $(function () {
+            var mid = location.search.split("=")[1];
+            $.post("/flyCinema/films/findFilmsByMid", {mid:mid},
+                function (data) {
+                $("#filemname").html(data.name);
+                $("#score").html(data.score);
+                $("#bigimg").attr('src',data.img);
+                $("#director").html("导演："+data.director);
+                $("#protagonist").html("主演："+data.protagonist);
+                $("#type").html("类型："+data.type);
+                $("#showtime").html("电影时长："+data.showtime+"分");
+                $("#introduction").html("剧情介绍："+data.introduction);
+                    var date = new Date(data.date);
+                    $.ajax({
+                        url: "/flyCinema/films/dateFormat",
+                        data: {date: date},
+                        success: function (resultInfo) {
+                            $("#date").html("上映时间："+resultInfo.data)
+                        },
+                        type: "get",
+                        dataType: "json",
+                        async: false,
+                    });
+                },
+                "json");
+
+            $.post("/flyCinema/city/findAllCity",{},
+                function (list) {
+                    var lis='<option>----请选择城市------</option>';
+                    for (var i = 0; i < list.length; i++) {
+                        lis += '<option value="' + list[i].cid + '">' + list[i].name + '</option>';
+                    }
+                    $("#province").html(lis);
+                },
+                "json"
+            );
+
+            $("#province").change(function () {
+                $.get("/flyCinema/city/findAreaByCid",{cid:this.value},
+                function (list) {
+                    var lis = '<option value="0">----选择地区------</option>';
+                    for (var i = 0; i < list.length ; i++) {
+                        lis +=  '<option value="'+list[i].aid+'">'+list[i].name+'</option>';
+                    }
+                    $("#region").html(lis)
+                },
+                    "json"
+                )
+            })
+
+            $("#region").change(function () {
+
+                $.get("/flyCinema/city/findCinemaByAid",{aid:this.value},
+                    function (list) {
+                        var lis =  '<option>----选择影城------</option>';
+                        for (var i = 0; i < list.length ; i++) {
+
+                            lis +=  '<option  value="'+list[i].cid+'">'+list[i].name+'</option>';
+                        }
+                        $("#studios").html(lis)
+                    },
+                    "json"
+                )
+               // if($("#time").val()==null){
+               //     $("#sch").html('<div class="col-xs-4" style="font-size: 30px;color: #2aabd2;margin-top: 30px">暂无排片！</div>')
+               // }
+            })
+
+            // var sid = null;
+            $("#studios").change(function () {
+                $("#time").html("");
+                $.get("/flyCinema/Schedule/findCinemaDateByCidMid",{cid:this.value,mid:mid},
+                    function (list) {
+                        var lis = '<option>----选择时间------</option>';
+                        for (var i = 0; i < list.length ; i++) {
+
+                            var date = new Date(list[i].date);
+                            $.ajax({
+                                url: "/flyCinema/films/dateFormat",
+                                data: {date: date},
+                                success: function (resultInfo) {
+                                    date = resultInfo.data;
+                                },
+                                type: "get",
+                                dataType: "json",
+                                async: false,
+                            });
+
+                            lis +=  '<option value="'+date+'">'+date+'</option>';
+                            // sid = list[0].sid
+                        }
+                        $("#time").html(lis);
+                    },
+                    "json"
+                )
+                $.get("/flyCinema/Schedule/findCinemaByCid",{cid:this.value},
+                    function (list) {
+                    $("#cinema").html(list.name);
+                    $("#address").html(list.address);
+                    },
+                    "json"
+                )
+                if($("#time").val()==null){
+                    $("#sch").html('<div class="col-xs-4" style="font-size: 30px;color: #2aabd2;margin-top: 30px">暂无排片！</div>')
+                }
+            })
+
+
+
+            $("#time").change(function () {
+               // var sid1 = $("#studios").val()
+                var date1 =$("#time").val()
+                var cid1 = $("#studios").val()
+                $.post("/flyCinema/Schedule/findCinemaBySid",{date:date1,cid:cid1,mid:mid},
+                    function (list) {
+
+                        var lis = ' <div class="row" style="margin-top: 10px">\n' +
+                            '            <div class="col-xs-2" style="color: #9d9d9d">放映时间</div>\n' +
+                            '            <div class="col-xs-2" style="color: #9d9d9d">放映版本</div>\n' +
+                            '            <div class="col-xs-2" style="color: #9d9d9d">放映厅</div>\n' +
+                            '            <div class="col-xs-2" style="color: #9d9d9d">座位情况</div>\n' +
+                            '            <div class="col-xs-2" style="color: #9d9d9d">电影票价格</div>\n' +
+                            '            <div class="col-xs-2" style="color: #9d9d9d">选座购票</div>\n' +
+                            '        </div>'
+                        var li ;
+                        for(var i = 0 ; i<list.length; i++){
+                            lis += '<div class="row" style="margin-top: 10px">\n' +
+                                '            <div class="col-xs-2" style="color: mediumorchid">'+list[i].time+'</div>\n' +
+                                '            <div class="col-xs-2" style="color: mediumorchid">'+list[i].language+'</div>\n' +
+                                '            <div class="col-xs-2" style="color: mediumorchid">'+list[i].name+'</div>\n' +
+                                '            <div class="col-xs-2" style="color: mediumorchid">'+list[i].count+'/30</div>\n' +
+                                '            <div class="col-xs-2" style="color: mediumorchid">'+list[i].price+'</div>\n' +
+                                '            <div class="col-xs-2" style="color: mediumorchid">\n' +
+                                '                <a href="choose_seat.html?sid='+list[i].sid+'">选座</a>\n' +
+                                '            </div>\n' +
+                                '        </div>'
+                        }
+                        $("#sch").html(lis);
+
+                    },
+                    "json"
+                )
+            })
+        });
+
+    </script>
+    <script src="js/jquery-1.10.2.min.js"></script>
+</head>
+<!--详情页面-->
+<body>
+<div id="header"></div>
+<div class="container" >
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row">
+        <span style="font-size: 20px" id="filemname">花木兰</span>
+        <span style="color: #ff0000 ;font-size: 23px;margin-left:6px" id="score">7.6</span>
+    </div>
+
+    <div class="row">
+        <div class="col-xs-3">
+            <div class="row" style="margin-top: 3px">
+                <img  id="bigimg" src="imgtext/ml1.jpg">
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div id="director">导演：</div>
+            <div id="protagonist">主演：</div>
+            <div id="showtime">片长：</div>
+            <div id="type">类型：</div>
+            <div id="introduction">剧情介绍：影片讲述了一位无所畏惧的年轻女子义无反顾为家国而战，成为中国史上最著名的伟大勇士之一。当皇帝下令境内每个家庭必须有一位男丁应召出征，抵御北方来犯者入侵，出身军戎之家的长女花木兰，
+                挺身而出，替病痛缠身的父亲应征入伍。 她女扮男装化名“花军”，一路历经磨练，驾驭自己内心的力量，激发真正的潜能。通过这段传奇历程，她将成为一名光荣的勇士，
+                不仅赢得国家的认可，更博得父亲的骄傲。
+            </div>
+        </div>
+        <div class="col-xs-3">
+            <div id="date">
+                上映时间：2020-09-11
+            </div>
+            <div><img  src="img/leader.png.jpg" style="margin-top: 30px"></div>
+
+        </div>
+    </div>
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row" style="margin-top: 30px">
+        <span style="font-size: 20px">选座购票</span>
+    </div>
+    <div class="row">
+        <div class="col-xs-3">
+            <div style="margin-top: 10px">选择地区</div>
+            <div style="margin-top: 10px">选择影城</div>
+            <div style="margin-top: 10px">选择时间</div>
+        </div>
+        <div class="col-xs-9" style="width: 63%">
+            <div style="margin-top: 10px;">
+                <select id="province">
+                    <option>----请选择城市------</option>
+                    <option value="0">北京</option>
+                    <option value="1">浙江</option>
+                    <option value="2">山东</option>
+                    <option value="3">河北</option>
+                </select>
+                <select id="region">
+                    <option>----选择地区------</option>
+                </select>
+            </div>
+            <div style="margin-top: 10px">
+                <select id="studios">
+                    <option>----选择影城------</option>
+                </select>
+            </div>
+            <div style="margin-top: 10px">
+                <select id="time">
+                    <option>----选择时间------</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row" style="margin-top: 20px">
+        <span id="cinema" style="font-size: 20px;color: red">啥啥影城</span>
+        <span  id="address" style="color: #9d9d9d;margin-left: 20px">地址：xxxxxxxxx</span>
+    </div>
+    <form>
+    <div class="row" id="sch">
+        <div class="row" style="margin-top: 10px">
+            <div class="col-xs-2" style="color: #9d9d9d">放映时间</div>
+            <div class="col-xs-2" style="color: #9d9d9d">放映版本</div>
+            <div class="col-xs-2" style="color: #9d9d9d">放映厅</div>
+            <div class="col-xs-2" style="color: #9d9d9d">座位情况</div>
+            <div class="col-xs-2" style="color: #9d9d9d">电影票价格</div>
+            <div class="col-xs-2" style="color: #9d9d9d">选座购票</div>
+        </div>
+        <div class="row" style="margin-top: 10px">
+            <div class="col-xs-4">
+                <img src="img/fj.jpg">
+            </div>
+            <div class="col-xs-4" style="font-size: 30px;color: #2aabd2;margin-top: 30px">亲，选个时间看电影吧！</div>
+        </div>
+    </div>
+    </form>
+    <hr size="1" width="100%" align="left" noshade>
+</div>
+<div id="footer"></div>
+<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+<script src="js/jquery-3.3.1.js"></script>
+<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+<script src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/include.js"></script>
+</body>
+</html>

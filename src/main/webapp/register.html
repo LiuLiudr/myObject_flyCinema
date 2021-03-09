@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>注册</title>
+        <link rel="stylesheet" type="text/css" href="css/common.css">
+        <link rel="stylesheet" href="css/register.css">
+		<!--导入jquery-->
+		<script src="js/jquery-3.3.1.js"></script>
+		<script src="js/jquery.validate.min.js"></script>
+		<script>
+			$(function () {
+				$("#submit").click(function () {
+					var flag = $("#registerForm").valid();
+					if (flag) {
+						$.ajax({
+							url: "/flyCinema/user/regUser",
+							data: $("#registerForm").serialize(),
+							success: function (data) {
+								if (!data.flag) {
+									location.href = "register_ok.html";
+								} else {
+									$("#errorMessage").html(data.errorMsg);
+								}
+							},
+							type: "post",
+							async: true
+						});
+					}
+				});
+				$.validator.addMethod("checkUsername", function (value, element, params) {
+					var check = false;
+					$.ajax({
+						url: "/flyCinema/user/CheckUser",
+						data: {username: value},
+						success: function (data) {
+							check = !data.flag;
+						},
+						dataType: "json",
+						type: "get",
+						async:false
+					})
+					return check;
+				});
+				$.validator.addMethod("checkCheck", function (value, element, params) {
+					var check = false;
+					$.ajax({
+						url: "/flyCinema/CodeCheckServlet",
+						data: {checkCode: value},
+						success: function (data) {
+							check = data.flag;
+						},
+						dataType: "json",
+						type: "get",
+						async:false
+					})
+					return check;
+				});
+				$("#registerForm").validate({
+					rules: {
+						username: {
+							required: true,
+							minlength: 6,
+							maxlength: 18,
+							checkUsername: true
+						},
+						password: {
+							required: true,
+							minlength: 6,
+							maxlength: 18
+						},
+						//竟然没有rePassword
+						email: {
+							required: true,
+							email: true
+						},
+						check: {
+							required: true,
+							checkCheck: true
+						}
+					},
+					errorPlacement: function (error, element) {
+						var cls = element.prop("class");
+						if (cls.indexOf("error") > -1) {
+							element.css("border", "solid 2px #ff0000");
+						} else {
+							element.css("border", "");
+						}
+					},
+					success: function (element) {
+
+					}
+				});
+			});
+
+
+		</script>
+    </head>
+	<body>
+	<!--引入头部-->
+	<div id="header"></div>
+        <!-- 头部 end -->
+    	<div class="rg_layout">
+    		<div class="rg_form clearfix">
+    			<div class="rg_form_left">
+    				<p>新用户注册</p>
+    				<p>USER REGISTER</p>
+    			</div>
+    			<div class="rg_form_center">
+					
+					<!--注册表单-->
+    				<form id="registerForm">
+						<!--提交处理请求的标识符-->
+						<input type="hidden" name="action" value="register">
+    					<table style="margin-top: 25px;">
+							<div id="errorMessage" style="text-align: center; color: red"></div>
+    						<tr>
+    							<td class="td_left">
+    								<label for="username">用户名</label>
+    							</td>
+    							<td class="td_right">
+    								<input type="text" id="username" name="username" placeholder="请输入账号">
+    							</td>
+								<td class="td_right">
+									<label for="username" ></label>
+								</td>
+    						</tr>
+    						<tr>
+    							<td class="td_left">
+    								<label for="password">密码</label>
+    							</td>
+    							<td class="td_right">
+    								<input type="text" id="password" name="password" placeholder="请输入密码">
+    							</td>
+								<td class="td_right">
+									<label for="password" ></label>
+								</td>
+    						</tr>
+
+							<tr>
+								<td class="td_left">
+									<label for="payment">支付密码</label>
+								</td>
+								<td class="td_right">
+									<input type="text" id="payment" name="payment" placeholder="请输入支付密码">
+								</td>
+							</tr>
+							<tr>
+								<td class="td_left">
+									<label for="age">年龄</label>
+								</td>
+								<td class="td_right">
+									<input type="text" id="age" name="age" placeholder="请输入年龄">
+								</td>
+							</tr>
+
+
+							<tr>
+								<td class="td_left">
+									<label for="email">Email</label>
+								</td>
+								<td class="td_right">
+									<input type="text" id="email" name="email" placeholder="请输入Email">
+								</td>
+								<td class="td_right">
+									<label for="email" ></label>
+								</td>
+							</tr>
+    						<tr>
+    							<td class="td_left">
+    								<label for="birthday">出生日期</label>
+    							</td>
+    							<td class="td_right">
+    								<input type="date" id="birthday" name="birthday">
+    							</td>
+    						</tr>
+    						<tr>
+    							<td class="td_left">
+    								<label for="check">验证码</label>
+    							</td>
+    							<td class="td_right check">
+    								<input type="text" id="check" name="check" class="check">
+    								<img src="/flyCinema/checkCode" height="32px" alt="" onclick="changeCheckCode(this)">
+									<script type="text/javascript">
+										//图片点击事件
+										function changeCheckCode(img) {
+											img.src="checkCode?"+new Date().getTime();
+                                        }
+									</script>
+    							</td>
+								<td class="td_right check">
+									<label for="check" ></label>
+								</td>
+    						</tr>
+    						<tr>
+    							<td class="td_left">
+    							</td>
+    							<td class="td_right check">
+    								<input type="button" class="submit" value="注册" id="submit">
+									<span id="msg" style="color: red;"></span>
+    							</td>
+    						</tr>
+    					</table>
+    				</form>
+    			</div>
+    			<div class="rg_form_right">
+    				<p>
+    					已有账号？
+    					<a href="javascript:window.location.href='login.html';">立即登录</a>
+    				</p>
+    			</div>
+    		</div>
+    	</div>
+        <!--引入尾部-->
+    	<div id="footer"></div>
+		<!--导入布局js，共享header和footer-->
+		<script type="text/javascript" src="js/include.js"></script>
+    	
+    </body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html >
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>电影列表页</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+    <script src="js/jquery-3.3.1.js"></script>
+    <script src="js/getParameter.js"></script>
+    <script>
+        $(function () {
+
+            var mname = decodeURI(getParameter("mname"));
+            var currentPage = getParameter("currentPage");
+            load(currentPage,mname);
+
+        })
+        function load(currentPage,mname){
+            $.post('/flyCinema/films/findAllFilms',{currentPage:currentPage,mname:mname},function (data) {
+                $("#totalpage").html(data.totalPage);
+                $("#totalcount").html(data.totalCount);
+                var start = data.currentPage - 5;
+                var end = data.currentPage + 4;
+                if (start<1){
+                    start = 1;
+                    end = start + 9;
+                }
+                if (end > data.totalPage){
+                    end = data.totalPage;
+                    start = end - 9;
+                }
+                if (data.totalPage<10){
+                    start = 1;
+                    end = data.totalPage
+                }
+                var beforePage = data.currentPage-1;
+                if (beforePage<1){
+                    beforePage = 1;
+                }
+                mname = "'" + mname + "'";
+                var cli='';
+                if (data.currentPage === 1) {
+                    cli = '<li onclick="load(' + 1 + ','+ mname+')"><a href="javascript:;">首页</a></li>\n' +
+                        '<li class="threeword" hidden="hidden"><a href="#">上一页</a></li>';
+                }else {
+                    cli = '<li onclick="load(' + 1 + ','+ mname+')"><a href="javascript:;">首页</a></li>\n' +
+                        '<li class="threeword" onclick="load(' + beforePage + ','+ mname+')"><a href="javascript:;">上一页</a></li>';
+                }
+                for (var i = start; i <= end; i++) {
+                    if (i === data.currentPage) {
+                        var li = '<li class="curPage" onclick="load(' + i + ','+ mname+')"><a href="javascript:;" >'+i+'</a></li>';
+                    }else {
+                        var li = '<li onclick="load(' + i + ','+ mname+')"><a href="javascript:;">'+i+'</a></li>';
+                    }
+                    cli += li;
+                }
+                var afterPage = data.currentPage+1;
+                if (afterPage>data.totalPage){
+                    afterPage = data.totalPage;
+                }
+                if (data.currentPage === data.totalPage) {
+                    cli += ' <li class="threeword" hidden="hidden"><a href="javascript:;">下一页</a></li>' +
+                        '<li class="threeword" onclick="load('+afterPage+','+ mname+')"><a href="javascript:;">末页</a></li>';
+                }else {
+                    cli += ' <li class="threeword" onclick="load('+afterPage+','+ mname+')"><a href="javascript:;">下一页</a></li>' +
+                        '<li class="threeword" onclick="load('+data.totalPage+','+ mname+')"><a href="javascript:;">末页</a></li>';
+                }
+                $("#page").html(cli);
+
+                var list = '';
+                for (var i = 0; i < data.list.length; i++) {
+                    if (data.list[i].date > new Date().getTime()){
+                        var movie = '<div style="margin-top: 30px" class="col-xs-3">\n' +
+                    '            <img  src="'+data.list[i].img+'">\n' +
+                    '<p style="text-align: center;margin-right: 60px;font-size: " >'+data.list[i].name +'<h style="color:red;">即将上映</h></p>'+
+                            '            <a href="/flyCinema/details.html?mid='+data.list[i].mid+'"><button type="button" class="btn btn-info" style="width: 160px;margin-left: 18px;margin-bottom: 5px;margin-top: 10px" >选座购票</button></a>\n' +
+
+                            '        </div>';
+                    }else {
+                        var movie = '<div class="col-xs-3">\n' +
+                            '            <img  src="'+data.list[i].img+'">\n' +
+                            '<p style="text-align: center;margin-right: 60px">'+data.list[i].name +'<h style="color:red;">正在热映</h></p>'+
+                        '            <a href="/flyCinema/details.html?mid='+data.list[i].mid+'"><button type="button" class="btn btn-info" style="width: 160px;margin-left: 18px;margin-bottom: 5px;margin-top: 10px" >选座购票</button></a>\n' +
+                            '        </div>';
+                    }
+                    list+=movie;
+                }
+                $("#movieList").html(list);
+            },"json");
+        }
+        function hotMovie(currentPage) {
+                $.post('/flyCinema/films/findAllHotFilms', {currentPage:currentPage}, function (data) {
+                    $("#totalpage").html(data.totalPage);
+                    $("#totalcount").html(data.totalCount);
+                    var start = data.currentPage - 5;
+                    var end = data.currentPage + 4;
+                    if (start<1){
+                        start = 1;
+                        end = start + 9;
+                    }
+                    if (end > data.totalPage){
+                        end = data.totalPage;
+                        start = end - 9;
+                    }
+                    if (data.totalPage<10){
+                        start = 1;
+                        end = data.totalPage
+                    }
+                    var beforePage = data.currentPage-1;
+                    if (beforePage<1){
+                        beforePage = 1;
+                    }
+                    var cli='';
+                    if (data.currentPage === 1) {
+                        cli = '<li onclick="hotMovie(' + 1 + ')"><a href="javascript:;">首页</a></li>\n' +
+                            '<li class="threeword" hidden="hidden"><a href="#">上一页</a></li>';
+                    }else {
+                        cli = '<li onclick="hotMovie(' + 1 + ')"><a href="javascript:;">首页</a></li>\n' +
+                            '<li class="threeword" onclick="hotMovie(' + beforePage + ')"><a href="javascript:;">上一页</a></li>';
+                    }
+                    for (var i = start; i <= end; i++) {
+                        if (i === data.currentPage) {
+                            var li = '<li class="curPage" onclick="hotMovie(' + i + ')"><a href="javascript:;" >'+i+'</a></li>';
+                        }else {
+                            var li = '<li onclick="hotMovie(' + i + ')"><a href="javascript:;">'+i+'</a></li>';
+                        }
+                        cli += li;
+                    }
+                    var afterPage = data.currentPage+1;
+                    if (afterPage>data.totalPage){
+                        afterPage = data.totalPage;
+                    }
+                    if (data.currentPage === data.totalPage) {
+                        cli += ' <li class="threeword" hidden="hidden"><a href="javascript:;">下一页</a></li>' +
+                            '<li class="threeword" onclick="hotMovie('+afterPage+')"><a href="javascript:;">末页</a></li>';
+                    }else {
+                        cli += ' <li class="threeword" onclick="hotMovie('+afterPage+')"><a href="javascript:;">下一页</a></li>' +
+                            '<li class="threeword" onclick="hotMovie('+data.totalPage+')"><a href="javascript:;">末页</a></li>';
+                    }
+                    $("#page").html(cli);
+
+                    var list = '';
+                    for (var i = 0; i < data.list.length; i++) {
+                            var movie = '<div style="margin-top: 30px" class="col-xs-3">\n' +
+                                '            <img  src="'+data.list[i].img+'">\n' +
+                                '<p style="text-align: center;margin-right: 60px">'+data.list[i].name +'</p>'+
+                                '            <a href="/flyCinema/details.html?mid='+data.list[i].mid+'"><button type="button" class="btn btn-info" style="width: 160px;margin-left: 18px;margin-bottom: 5px;margin-top: 10px" >选座购票</button></a>\n' +
+                                '        </div>';
+                        list+=movie;
+                    }
+                    $("#movieList").html(list);
+                },"json");
+        }
+        function nextMovie(currentPage) {
+            $.post('/flyCinema/films/findAllNextFilms', {currentPage:currentPage}, function (data) {
+                $("#totalpage").html(data.totalPage);
+                $("#totalcount").html(data.totalCount);
+                var start = data.currentPage - 5;
+                var end = data.currentPage + 4;
+                if (start<1){
+                    start = 1;
+                    end = start + 9;
+                }
+                if (end > data.totalPage){
+                    end = data.totalPage;
+                    start = end - 9;
+                }
+                if (data.totalPage<10){
+                    start = 1;
+                    end = data.totalPage
+                }
+                var beforePage = data.currentPage-1;
+                if (beforePage<1){
+                    beforePage = 1;
+                }
+                var cli='';
+                if (data.currentPage === 1) {
+                    cli = '<li onclick="nextMovie(' + 1 + ')"><a href="javascript:;">首页</a></li>\n' +
+                        '<li class="threeword" hidden="hidden"><a href="#">上一页</a></li>';
+                }else {
+                    cli = '<li onclick="nextMovie(' + 1 + ')"><a href="javascript:;">首页</a></li>\n' +
+                        '<li class="threeword" onclick="nextMovie(' + beforePage + ')"><a href="javascript:;">上一页</a></li>';
+                }
+                for (var i = start; i <= end; i++) {
+                    if (i === data.currentPage) {
+                        var li = '<li class="curPage" onclick="nextMovie(' + i + ')"><a href="javascript:;" >'+i+'</a></li>';
+                    }else {
+                        var li = '<li onclick="nextMovie(' + i + ')"><a href="javascript:;">'+i+'</a></li>';
+                    }
+                    cli += li;
+                }
+                var afterPage = data.currentPage+1;
+                if (afterPage>data.totalPage){
+                    afterPage = data.totalPage;
+                }
+                if (data.currentPage === data.totalPage) {
+                    cli += ' <li class="threeword" hidden="hidden"><a href="javascript:;">下一页</a></li>' +
+                        '<li class="threeword" onclick="nextMovie('+afterPage+')"><a href="javascript:;">末页</a></li>';
+                }else {
+                    cli += ' <li class="threeword" onclick="nextMovie('+afterPage+')"><a href="javascript:;">下一页</a></li>' +
+                        '<li class="threeword" onclick="nextMovie('+data.totalPage+')"><a href="javascript:;">末页</a></li>';
+                }
+                $("#page").html(cli);
+
+                var list = '';
+                for (var i = 0; i < data.list.length; i++) {
+                    var movie = '<div style="margin-top: 30px" class="col-xs-3">\n' +
+                        '            <img  src="'+data.list[i].img+'">\n' +
+                        '<p style="text-align: center;margin-right: 60px">'+data.list[i].name +'</p>'+
+                        '            <a href="/flyCinema/details.html?mid='+data.list[i].mid+'"><button type="button" class="btn btn-info" style="width: 160px;margin-left: 18px;margin-bottom: 5px;margin-top: 10px" >选座购票</button></a>\n' +
+                        '        </div>';
+                    list+=movie;
+                }
+                $("#movieList").html(list);
+            },"json");
+        }
+    </script>
+</head>
+<body>
+<div id="header"></div>
+<form>
+<div class="container">
+    <div class="row">
+        <a href="index.html">首页</a> <span> &gt;</span>
+        <a href="javascript:void(0)" style="text-decoration: none">影片</a> <span> &gt;</span>
+    </div>
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row">
+        <div  class="col-xs-1" onclick="hotMovie()"><a href="javascript:;">正在热映</a></div>
+        <div  class="col-xs-1" onclick="nextMovie()"><a href="javascript:;">即将上映</a></div>
+    </div>
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row" id="movieList">
+    </div>
+
+    <hr size="1" width="100%" align="left" noshade>
+    <div class="row">
+        <div class="page_num_inf">
+            <i></i> 共
+            <span id="totalpage"></span>页<span id="totalcount"></span>条
+        </div>
+        <div class="pageNum">
+            <ul id="page">
+
+            </ul>
+        </div>
+    </div>
+</div>
+</form>
+<hr size="1" width="100%" align="left" noshade>
+<div id="footer"></div>
+<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+<script src="js/jquery-3.3.1.js"></script>
+<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+<script src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/include.js"></script>
+</body>
+</html>

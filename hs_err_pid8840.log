@@ -1,0 +1,35 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00000000619efab3, pid=8840, tid=13176
+#
+# JRE version: Java(TM) SE Runtime Environment (9.0+11) (build 9.0.4+11)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (9.0.4+11, mixed mode, tiered, compressed oops, g1 gc, windows-amd64)
+# Problematic frame:
+# V  [jvm.dll+0x33fab3]
+#
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.java.com/bugreport/crash.jsp
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -Dmaven.multiModuleProjectDirectory=C:\Users\Administrator\Desktop\chong\flyCinema_by_github -DarchetypeCatalog=internal -Dmaven.home=H:\BOOKs\IT\Desktop_Quick_Path\06_Java_EE\apache-maven-3.6.3 -Dclassworlds.conf=H:\BOOKs\IT\Desktop_Quick_Path\06_Java_EE\apache-maven-3.6.3\bin\m2.conf -Dmaven.ext.class.path=F:\IDEA\IntelliJ IDEA 2020.1.2\plugins\maven\lib\maven-event-listener.jar -javaagent:F:\IDEA\IntelliJ IDEA 2020.1.2\lib\idea_rt.jar=5965:F:\IDEA\IntelliJ IDEA 2020.1.2\bin -Dfile.encoding=UTF-8 org.codehaus.classworlds.Launcher -Didea.version2020.1.2 -s H:\BOOKs\IT\Desktop_Quick_Path\06_Java_EE\apache-maven-3.6.3\conf\settings.xml tomcat7:run
+
+Host: Intel(R) Core(TM) i5-6300HQ CPU @ 2.30GHz, 4 cores, 7G,  Windows 10 , 64 bit Build 18362 (10.0.18362.959)
+Time: Fri Sep 18 00:23:16 2020 ?D1¨²¡À¨º¡Á?¨º¡À?? elapsed time: 13 seconds (0d 0h 0m 13s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x000001b3c1eba800):  JavaThread "Druid-ConnectionPool-Create-542599192" daemon [_thread_in_vm, id=13176, stack(0x0000004011500000,0x0000004011600000)]
+
+Stack: [0x0000004011500000,0x0000004011600000],  sp=0x00000040115ff770,  free space=1021k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [jvm.dll+0x33fab3]
+V  [jvm.dll+0x586f82]
+V  [jvm.dll+0x34067f]
+V  [jvm.dll+0x340567]
+V  [jvm.dll+0x3b60dd]
+V  [jvm.dll+0x66b44f]

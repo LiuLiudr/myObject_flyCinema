@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <script src="js/jquery-1.11.0.min.js"></script>
+    <title>后台管理系统</title>
+
+
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+    <link rel="stylesheet" href="css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="css/bootstrap.css">
+
+    <script src="js/getParameter.js"></script>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+    <!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+    <script src="js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <script src="js/jquery-1.11.0.min.js"></script>
+    <style>
+
+        table {
+            table-layout: fixed;
+        }
+
+        #options td {
+            height: 50px;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 15pt;
+        }
+
+        thead {
+            height: 50px;
+        }
+
+        thead td {
+            font-size: 15pt;
+        }
+
+        tbody td {
+            white-space:nowrap;
+            overflow: hidden;
+            text-overflow:ellipsis;
+        }
+    </style>
+    <script>
+        $(function () {
+            $.ajax({
+                url: "/flyCinema/Background/booleanAdmin",
+                data: {},
+                success: function (flag) {
+                    if (!flag) {
+                        alert("请使用管理员账户登录！");
+                        window.location.href = "login.html";
+                    }
+                },
+                type: "get",
+                async: false
+            });
+            var currentPage = getParameter("currentPage");
+            var pageSize = 5;
+            if (currentPage == null) {
+                currentPage = 1;
+            }
+            load0(currentPage, pageSize);
+
+        });
+
+        //load0是显示所有movie
+        function load0(currentPage, pageSize) {
+            $.ajax({
+                url: "/flyCinema/Background/findAllMovies",
+                data: {currentPage: currentPage, pageSize: pageSize},
+                success: function (pageBean) {
+                    var li = '<table class="table">\n' +
+                             '<thead>\n' +
+                             '    <tr>\n' +
+                             '        <td>电影名</td>\n' +
+                             '        <td>导演</td>\n' +
+                             '        <td>主演</td>\n' +
+                             '        <td>类型</td>\n' +
+                             '        <td>地区</td>\n' +
+                             '        <td>时长</td>\n' +
+                             '        <td>简介</td>\n' +
+                             '        <td>评分</td>\n' +
+                             '        <td>图片路径</td>\n' +
+                             '        <td>上映日期</td>\n' +
+                             '        <td>删除/td>\n' +
+                             '    </tr>\n' +
+                             '</thead>\n' +
+                             '<tbody id="having_movies">\n';
+
+                    for (var i = 0; i < pageBean.list.length; i++) {
+
+                        var date = new Date(pageBean.list[i].date);
+                        $.ajax({
+                            url: "/flyCinema/films/dateFormat",
+                            data: {date: date},
+                            success: function (resultInfo) {
+                                date = resultInfo.data;
+                            },
+                            type: "get",
+                            dataType: "json",
+                            async: false,
+                        });
+
+                        li += ' <tr>\n' +
+                              '    <td>'+pageBean.list[i].name+'</td>\n' +
+                              '    <td>'+pageBean.list[i].director+'</td>\n' +
+                              '    <td>'+pageBean.list[i].protagonist+'</td>\n' +
+                              '    <td>'+pageBean.list[i].type+'</td>\n' +
+                              '    <td>'+pageBean.list[i].region+'</td>\n' +
+                              '    <td>'+pageBean.list[i].showtime+'</td>\n' +
+                              '    <td>'+pageBean.list[i].introduction+'</td>\n' +
+                              '    <td>'+pageBean.list[i].score+'</td>\n' +
+                              '    <td>'+pageBean.list[i].img+'</td>\n' +
+                              '    <td>'+date+'</td>\n' +
+                              '    <td><input class="btn btn-default" type="button" value="删除" onclick="deleteMovie('+pageBean.list[i].mid+')"></td>\n' +
+                              '</tr>';
+                    }
+                    li += '</tbody>\n'+
+                        '</table>';
+
+
+                    //这里做底部的分页按钮
+                    if (currentPage == 1) {
+                        li += '<nav aria-label="Page navigation">\n' +
+                            '                        <ul id="pages" class="pagination">\n' +
+                            '                        <li onclick="load0(' + (currentPage) + ', ' + pageSize + ')">\n' +
+                            '                        <a href="#" aria-label="Previous">\n' +
+                            '                        <span aria-hidden="true">&laquo;</span>\n' +
+                            '                    </a>\n' +
+                            '                    </li>';
+                    } else {
+                        li += '<nav aria-label="Page navigation">\n' +
+                            '                        <ul id="pages" class="pagination">\n' +
+                            '                        <li onclick="load0('+(currentPage - 1)+', '+pageSize+')">\n' +
+                            '                        <a href="#" aria-label="Previous">\n' +
+                            '                        <span aria-hidden="true">&laquo;</span>\n' +
+                            '                    </a>\n' +
+                            '                    </li>';
+                    }
+
+
+                    for (var i = 1; i < pageBean.totalPage + 1; i++) {
+                        if (i == currentPage) {
+                            li += '<li class="active"><a href="#">'+i+'</a></li>';
+                        } else {
+                            li += '<li onclick="load0('+i+', '+pageSize+')" ><a href="#">'+i+'</a></li>';
+                        }
+                    }
+
+                    if (currentPage == pageBean.totalPage) {
+                        li += '<li onclick="load0(' + (currentPage) + ', ' + pageSize + ')">\n' +
+                            '                    <a href="#" aria-label="Next">\n' +
+                            '                        <span aria-hidden="true">&raquo;</span>\n' +
+                            '                    </a>\n' +
+                            '                    </li>\n' +
+                            '                    </ul>\n' +
+                            '                    </nav>';
+                    } else {
+                        li += '<li onclick="load0('+(currentPage + 1)+', '+pageSize+')">\n' +
+                            '                    <a href="#" aria-label="Next">\n' +
+                            '                        <span aria-hidden="true">&raquo;</span>\n' +
+                            '                    </a>\n' +
+                            '                    </li>\n' +
+                            '                    </ul>\n' +
+                            '                    </nav>';
+                    }
+                    $("#_right").html(li);
+                },
+                type: "post",
+                dataType: "json",
+                async: true,
+            });
+        }
+
+        //load1是添加新电影。
+        function load1() {
+            var li = ' <div class="container">\n' +
+                '            <form id="insert_movie_form">\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="movie_name">电影名</label>\n' +
+                '                    <input type="text" class="form-control" id="movie_name" name="name" placeholder="请输入电影名">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="director">导演</label>\n' +
+                '                    <input type="text" class="form-control" id="director" name="director" placeholder="请输入导演名">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="protagonist">主演</label>\n' +
+                '                    <input type="text" class="form-control" id="protagonist" name="protagonist" placeholder="请输入主演名">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="type">类型</label>\n' +
+                '                    <input type="text" class="form-control" id="type" name="type" placeholder="请输入电影类型">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="region">国家</label>\n' +
+                '                    <input type="text" class="form-control" id="region" name="region" placeholder="请输入国家">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="showtime">电影时长</label>\n' +
+                '                    <input type="text" class="form-control" id="showtime" name="showtime" placeholder="请输入电影时长">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="introduction">电影简介</label>\n' +
+                '                    <input rows="3" type="text" class="form-control" id="introduction" name="introduction" placeholder="请输入电影简介">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="score">电影评分</label>\n' +
+                '                    <input type="text" class="form-control" id="score" name="score" placeholder="请输入电影简介">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="img">电影图片路径</label>\n' +
+                '                    <input type="text" class="form-control" id="img" name="img" placeholder="请输入电影图片路径" value="img/movie/1.jpg">\n' +
+                '                </div>\n' +
+                '                <div class="form-group">\n' +
+                '                    <label for="date">电影上映时间</label>\n' +
+                '                    <input type="date" class="form-control" id="date" name="date" >\n' +
+                '                </div>\n' +
+                '                <button id="movie_submit" type="submit" class="btn btn-default" onclick="insertMovie()">提交</button>\n' +
+                '            </form>\n' +
+                '        </div>';
+            $("#_right").html(li);
+        }
+
+        function deleteMovie(mid) {
+            $.ajax({
+                url: "/flyCinema/Background/deleteMovieByMid",
+                data: {mid: mid},
+                success: function (flag) {
+                    if (flag) {
+                        alert("删除成功");
+                        window.location.href = "admin_ground.html";
+                    }
+                },
+                type: "get",
+                async: false
+            });
+        }
+
+        function insertMovie() {
+            event.preventDefault();
+            $.ajax({
+                url: "/flyCinema/Background/MovieInsert",
+                data: $("#insert_movie_form").serialize(),
+                success: function (mid) {
+                    //把mid给下面的form
+                    load2(mid);
+                },
+                type: "post",
+                async: true
+            });
+        }
+
+        function insertSchedule(mid) {
+            event.preventDefault();
+            $.ajax({
+                url: "/flyCinema/Background/ScheduleInsert",
+                data: $("#insert_schedule_form").serialize(),
+                success: function (flag) {
+                    if (flag) {
+                        alert("添加成功");
+                    }
+                    //把mid继续传递
+                    load2(mid);
+                },
+                type: "post",
+                async: true
+            });
+        }
+
+        function load2(mid) {
+            if (mid == null) {
+                alert("请先添加电影");
+            }
+            var list = null;
+
+            $.ajax({
+                url: "/flyCinema/Background/findAllCid",
+                data: {},
+                success: function (a) {
+                    list = a;
+                },
+                type: "get",
+                async: false
+            });
+
+            li = '<div class="container">\n' +
+                '                <form id="insert_schedule_form">\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_mid">电影id</label>\n' +
+                '                        <input type="password" class="form-control" id="schedule_mid" name="mid" value="'+mid+'">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_date">档期</label>\n' +
+                '                        <input type="date" class="form-control" id="schedule_date" name="date">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_time">场次时间</label>\n' +
+                '                        <input type="text" class="form-control" id="schedule_time" name="time" placeholder="请输入场次时间（如：17:15）">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_name">影厅名</label>\n' +
+                '                        <input type="text" class="form-control" id="schedule_name" name="name" placeholder="请输入影厅名（如：2号厅）">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_price">票价</label>\n' +
+                '                        <input type="text" class="form-control" id="schedule_price" name="price" placeholder="请输入票价（如：45）">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_language">电影时长</label>\n' +
+                '                        <input type="text" class="form-control" id="schedule_language" name="language" placeholder="请输入语言版本（如：国语3D）">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="introduction">电影简介</label>\n' +
+                '                        <input type="text" class="form-control" id="introduction" name="introduction" placeholder="请输入电影简介">\n' +
+                '                    </div>\n' +
+                '                    <div class="form-group">\n' +
+                '                        <label for="schedule_cid">上架影城</label>\n' +
+                '                        <select id="schedule_cid" class="form-control" name="cid">\n';
+
+            for (var i = 0; i < list.length; i++) {
+                li += '<option value="'+list[i].cid+'">'+list[i].name+'</option>';
+            }
+
+             li += '                        </select>\n' +
+                '                    </div>\n' +
+                '                    <button type="submit" class="btn btn-default" onclick="insertSchedule('+mid+')">提交</button>\n' +
+                '                </form>\n' +
+                '            </div>';
+            $("#_right").html(li);
+            if (mid == null) {
+                load1();
+            }
+        }
+
+    </script>
+
+</head>
+<body>
+<!--引入头部-->
+<div id="header"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2" >
+            <table id="options" class="table table-hover ">
+                <tr class="warning" onclick="load0(1, 5)">      <!--load0是显示所有影片-->
+                    <td>影片管理</td>
+                </tr>
+                <tr class="warning" onclick="load1()">          <!--load1是添加新电影-->
+                    <td>添加电影</td>
+                </tr>
+                <tr class="warning" onclick="load2()">          <!--给新电影添加档期-->
+                    <td>档期添加</td>
+                </tr>
+            </table>
+        </div>
+
+        <div id="_right" class="col-md-10">
+
+<!--            <table class="table">-->
+<!--                <thead>-->
+<!--                <tr>-->
+<!--                    <td>电影名</td>-->
+<!--                    <td>导演</td>-->
+<!--                    <td>主演</td>-->
+<!--                    <td>类型</td>-->
+<!--                    <td>地区</td>-->
+<!--                    <td>市场</td>-->
+<!--                    <td>简介</td>-->
+<!--                    <td>评分</td>-->
+<!--                    <td>图片路径</td>-->
+<!--                    <td>上映日期</td>-->
+<!--                    <td>修改</td>-->
+<!--                </tr>-->
+<!--                </thead>-->
+<!--                <tbody id="having_movies">-->
+
+<!--                <tr>-->
+<!--                    <td>电影名</td>-->
+<!--                    <td>导演</td>-->
+<!--                    <td>主演</td>-->
+<!--                    <td>类型</td>-->
+<!--                    <td>地区</td>-->
+<!--                    <td>市场</td>-->
+<!--                    <td>简介</td>-->
+<!--                    <td>评分</td>-->
+<!--                    <td>图片路径</td>-->
+<!--                    <td>上映日期</td>-->
+<!--                    <td><input class="btn btn-default" type="button" value="修改" onclick="modifyMovie(mid)"></td>-->
+<!--                </tr>-->
+
+
+<!--                </tbody>-->
+
+<!--            </table>-->
+
+<!--            <nav aria-label="Page navigation">-->
+<!--                <ul id="pages" class="pagination">-->
+<!--                    <li>-->
+<!--                        <a onclick="load0(currentPage - 1, pageSize)" href="#" aria-label="Previous">-->
+<!--                            <span aria-hidden="true">&laquo;</span>-->
+<!--                        </a>-->
+<!--                    </li>-->
+<!--                    <li class="active"><a href="#">1</a></li>-->
+<!--                    <li><a href="#">1</a></li>-->
+<!--                    <li><a href="#">2</a></li>-->
+<!--                    <li><a href="#">3</a></li>-->
+<!--                    <li><a href="#">4</a></li>-->
+<!--                    <li><a href="#">5</a></li>-->
+<!--                    <li>-->
+<!--                        <a href="#" aria-label="Next">-->
+<!--                            <span aria-hidden="true">&raquo;</span>-->
+<!--                        </a>-->
+<!--                    </li>-->
+<!--                </ul>-->
+<!--            </nav>-->
+
+
+<!--        <div class="container">-->
+<!--            <form>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="movie_name">电影名</label>-->
+<!--                    <input type="text" class="form-control" id="movie_name" name="name" placeholder="请输入电影名">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="director">导演</label>-->
+<!--                    <input type="text" class="form-control" id="director" name="director" placeholder="请输入导演名">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="protagonist">主演</label>-->
+<!--                    <input type="text" class="form-control" id="protagonist" name="protagonist" placeholder="请输入主演名">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="type">类型</label>-->
+<!--                    <input type="text" class="form-control" id="type" name="type" placeholder="请输入电影类型">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="region">国家</label>-->
+<!--                    <input type="text" class="form-control" id="region" name="region" placeholder="请输入国家">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="showtime">电影时长</label>-->
+<!--                    <input type="text" class="form-control" id="showtime" name="showtime" placeholder="请输入电影时长">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="introduction">电影简介</label>-->
+<!--                    <input rows="3" type="text" class="form-control" id="introduction" name="introduction" placeholder="请输入电影简介">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="score">电影评分</label>-->
+<!--                    <input type="text" class="form-control" id="score" name="score" placeholder="请输入电影简介">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="img">电影图片路径</label>-->
+<!--                    <input type="text" class="form-control" id="img" name="img" placeholder="请输入电影图片路径" value="img/movie/1.jpg">-->
+<!--                </div>-->
+<!--                <div class="form-group">-->
+<!--                    <label for="date">电影上映时间</label>-->
+<!--                    <input type="date" class="form-control" id="date" name="date" >-->
+<!--                </div>-->
+<!--                <button type="submit" class="btn btn-default">提交</button>-->
+<!--            </form>-->
+<!--        </div>-->
+
+<!--            添加档期-->
+
+            <div class="container">
+                <form>
+                    <div class="form-group">
+                        <label for="schedule_mid">电影id</label>
+                        <input type="password" class="form-control" id="schedule_mid" name="mid" value="mid">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule_date">档期</label>
+                        <input type="date" class="form-control" id="schedule_date" name="date">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule_time">场次时间</label>
+                        <input type="text" class="form-control" id="schedule_time" name="time" placeholder="请输入场次时间（如：17:15）">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule_name">影厅名</label>
+                        <input type="text" class="form-control" id="schedule_name" name="name" placeholder="请输入影厅名（如：2号厅）">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule_price">票价</label>
+                        <input type="text" class="form-control" id="schedule_price" name="price" placeholder="请输入票价（如：45）">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule_language">电影时长</label>
+                        <input type="text" class="form-control" id="schedule_language" name="language" placeholder="请输入语言版本（如：国语3D）">
+                    </div>
+                    <div class="form-group">
+                        <label for="introduction">电影简介</label>
+                        <input rows="3" type="text" class="form-control" id="introduction" name="introduction" placeholder="请输入电影简介">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule_cid">上架影城</label>
+                        <select id="schedule_cid" class="form-control" name="cid">
+                            <option value="cid">影院名</option>
+                            <option value="cid">影院名</option>
+                            <option value="cid">影院名</option>
+                            <option value="cid">影院名</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-default">提交</button>
+                </form>
+            </div>
+
+
+
+    </div>
+</div>
+</div>
+<!--引入尾部-->
+<div id="footer"></div>
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="js/jquery-1.11.0.min.js"></script>
+<!-- Include all compiled plugins (below), or include individual files as needed -->
+<script src="js/bootstrap.min.js"></script>
+<!--导入布局js，共享header和footer-->
+<script type="text/javascript" src="js/include.js"></script>
+</body>
+</html>

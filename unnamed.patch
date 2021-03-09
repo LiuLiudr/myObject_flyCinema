@@ -1,0 +1,1152 @@
+Index: src/main/java/com/cn/flyCinema/dao/UserDao.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/cn/flyCinema/dao/UserDao.java	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ src/main/java/com/cn/flyCinema/dao/UserDao.java	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -7,7 +7,10 @@
+ 
+     int addUser(User user);
+ 
+-    int findUserByName(String username);
++    User findUserByName(String username);
+ 
+     void updateUser(User user);
++
++
++    int active(String code);
+ }
+Index: src/main/java/com/cn/flyCinema/dao/impl/FilmsDaoImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/cn/flyCinema/dao/impl/FilmsDaoImpl.java	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ src/main/java/com/cn/flyCinema/dao/impl/FilmsDaoImpl.java	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -8,6 +8,7 @@
+ public class FilmsDaoImpl implements FilmsDao {
+     @Override
+     public List<Movie> findHottestFilms() {
+-        String sql = "select * from table_movie "
++//        String sql = "select * from table_movie "
++        return null;
+     }
+ }
+Index: src/main/java/com/cn/flyCinema/dao/impl/UserDaoImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/cn/flyCinema/dao/impl/UserDaoImpl.java	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ src/main/java/com/cn/flyCinema/dao/impl/UserDaoImpl.java	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -26,10 +26,10 @@
+     }
+ 
+     @Override
+-    public int findUserByName(String username) {
++    public User findUserByName(String username) {
+         String sql = "select * from table_user where username = ?";
+-        int count = jt.queryForObject(sql, Integer.class, username);
+-        return count;
++        User user = jt.queryForObject(sql, new BeanPropertyRowMapper<>(User.class), username);
++        return user;
+     }
+ 
+     @Override
+@@ -37,4 +37,13 @@
+         String sql = "update table_user set username = ?, age = ?,birthday = ?,password = ?,email = ? where uid = ?";
+         jt.update(sql,user.getUsername(),user.getAge(),user.getBirthday(),user.getPassword(),user.getEmail(),user.getUid());
+     }
++
++    @Override
++    public int active(String code) {
++        String sql = "update table_user set status = 'Y' where code = ?";
++        int count = jt.update(sql, code);
++        return count;
++    }
++
++
+ }
+Index: src/main/java/com/cn/flyCinema/service/UserService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/cn/flyCinema/service/UserService.java	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ src/main/java/com/cn/flyCinema/service/UserService.java	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -11,4 +11,6 @@
+ 
+     void update(User user);
+ 
++    boolean active(String code);
++
+ }
+Index: src/main/java/com/cn/flyCinema/service/impl/UserServiceImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/cn/flyCinema/service/impl/UserServiceImpl.java	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ src/main/java/com/cn/flyCinema/service/impl/UserServiceImpl.java	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -4,6 +4,8 @@
+ import com.cn.flyCinema.dao.impl.UserDaoImpl;
+ import com.cn.flyCinema.entity.User;
+ import com.cn.flyCinema.service.UserService;
++import com.cn.flyCinema.util.MailUtils;
++import com.cn.flyCinema.util.UuidUtil;
+ 
+ public class UserServiceImpl implements UserService {
+     private UserDao ud = new UserDaoImpl();
+@@ -15,18 +17,38 @@
+ 
+     @Override
+     public boolean reg(User user) {
++        user.setStatus("N");
++        user.setCode(UuidUtil.getUuid());
+         int count = ud.addUser(user);
++        String text="<a href='http://localhost:8070/flyCinema/user/active?code="+user.getCode()+"'>账号激活</a>";
++        MailUtils.sendMail(user.getEmail(),text,"fly注册");
+         return count!=0;
+     }
+ 
+     @Override
+     public boolean findUserByUname(String username) {
+-        int count = ud.findUserByName(username);
+-        return count==0;
++        try {
++            User user = ud.findUserByName(username);
++            if(user == null){
++                return false;
++            }else {
++                return true;//库有返回true
++            }
++        }catch (Exception e){
++            return false;
++        }
+     }
++
+ 
+     @Override
+     public void update(User user) {
+         ud.updateUser(user);
+     }
++
++    @Override
++    public boolean active(String code) {
++        int count= ud.active(code);
++        return count!=0;
++    }
++
+ }
+Index: src/main/java/com/cn/flyCinema/web/servlet/UserServlet.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/com/cn/flyCinema/web/servlet/UserServlet.java	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ src/main/java/com/cn/flyCinema/web/servlet/UserServlet.java	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -53,23 +53,6 @@
+     }
+     //注册
+     public void regUser(HttpServletRequest request,HttpServletResponse response) throws IOException {
+-//        String code = (String) request.getSession().getAttribute("CHECKCODE_SERVER");
+-//        String checkCode = request.getParameter("checkCode");
+-//        Map<String, String[]> userMap = request.getParameterMap();
+-//        User user = new User();
+-//        BeanUtils.populate(user,userMap);
+-//        boolean isReg = us.reg(user);
+-//        if (code != null && code.equalsIgnoreCase(checkCode)){
+-//            if (!isReg){
+-//                info.setErrorMsg("你输入的注册信息有误，请重新输入");
+-//            }
+-//        }else {
+-//            isReg = false;
+-//            info.setErrorMsg("验证码有误");
+-//
+-//        }
+-//        info.setFlag(isReg);
+-//        Json(response,info);
+         User user = new User();
+         try {
+             BeanUtils.populate(user,request.getParameterMap());
+@@ -101,11 +84,9 @@
+     //注册时检验该用户名是否存在
+     public void CheckUser(HttpServletRequest request,HttpServletResponse response) throws Exception {
+         String username = request.getParameter("username");
+-        boolean flag = us.findUserByUname(username);
+-        if (!flag){
+-            info.setErrorMsg("该用户名不可用");
+-        }
+-        info.setFlag(flag);
++        boolean flag = us.findUserByUname(username);//true表示库中有
++
++        info.setFlag(!flag);
+         Json(response,info);
+     }
+     //修改个人信息 需前端判断输入是否为空
+@@ -115,4 +96,15 @@
+         BeanUtils.populate(user,map);
+         us.update(user);
+     }
++    public void active(HttpServletRequest request,HttpServletResponse response) throws IOException {
++        //邮箱激活
++        String code = request.getParameter("code");
++        boolean flag = us.active(code);
++        response.setContentType("text/html;charset=utf-8");
++        if(flag){
++            response.sendRedirect(request.getContextPath()+"/login.html");
++        }else {
++            response.getWriter().write("邮箱激活失败！联系管理员");
++        }
++    }
+ }
+Index: target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -1,21 +1,26 @@
+ com\cn\flyCinema\entity\User.class
+-com\cn\flyCinema\service\UserService.class
++com\cn\flyCinema\service\impl\FilmsServiceImpl.class
+ com\cn\flyCinema\service\impl\UserServiceImpl.class
+ com\cn\flyCinema\entity\City.class
+ com\cn\flyCinema\entity\Indent.class
+-com\cn\flyCinema\dao\UserDao.class
+ com\cn\flyCinema\entity\Cinema.class
++com\cn\flyCinema\service\FilmsService.class
++com\cn\flyCinema\web\servlet\UserServlet.class
++com\cn\flyCinema\web\filter\LoginFilter.class
++com\cn\flyCinema\web\servlet\CheckServlet.class
++com\cn\flyCinema\dao\impl\FilmsDaoImpl.class
++com\cn\flyCinema\util\JDBCUtils.class
++com\cn\flyCinema\util\JedisUtil.class
++com\cn\flyCinema\service\UserService.class
++com\cn\flyCinema\dao\UserDao.class
+ com\cn\flyCinema\dao\impl\UserDaoImpl.class
++com\cn\flyCinema\web\servlet\FilmsServlet.class
+ com\cn\flyCinema\entity\ResultInfo.class
+ com\cn\flyCinema\entity\Movie.class
+ com\cn\flyCinema\web\servlet\BaseServlet.class
+ com\cn\flyCinema\entity\Seating.class
+-com\cn\flyCinema\web\servlet\UserServlet.class
++com\cn\flyCinema\dao\FilmsDao.class
+ com\cn\flyCinema\entity\Area.class
+ com\cn\flyCinema\entity\Schedule.class
+ com\cn\flyCinema\web\servlet\CheckCodeServlet.class
+-com\cn\flyCinema\web\filter\LoginFilter.class
+-com\cn\flyCinema\web\servlet\CheckServlet.class
+ com\cn\flyCinema\web\filter\CharchaterFilter.class
+-com\cn\flyCinema\util\JDBCUtils.class
+-com\cn\flyCinema\util\JedisUtil.class
+Index: target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -1,21 +1,28 @@
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Area.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\service\impl\UserServiceImpl.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Movie.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Cinema.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\filter\CharchaterFilter.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\servlet\BaseServlet.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Schedule.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\service\UserService.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Indent.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\service\FilmsService.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\servlet\UserServlet.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\ResultInfo.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\servlet\CheckServlet.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\servlet\CheckCodeServlet.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\City.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\dao\UserDao.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\filter\LoginFilter.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Seating.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\User.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\util\JDBCUtils.java
+-D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\dao\impl\UserDaoImpl.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\util\UuidUtil.java
+ D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\util\JedisUtil.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\servlet\FilmsServlet.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Area.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\util\MailUtils.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\dao\FilmsDao.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\service\impl\UserServiceImpl.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\web\servlet\BaseServlet.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\service\UserService.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\ResultInfo.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\dao\UserDao.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\entity\Seating.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\dao\impl\UserDaoImpl.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\dao\impl\FilmsDaoImpl.java
++D:\Javaobject\tppweb\src\main\java\com\cn\flyCinema\service\impl\FilmsServiceImpl.java
+Index: target/tomcat/logs/access_log.2020-09-15
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- target/tomcat/logs/access_log.2020-09-15	(revision 9bde8f5a8e4e8c6e1fd2e80dfac4b1c96bbe53ba)
++++ target/tomcat/logs/access_log.2020-09-15	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
+@@ -1,176 +1,293 @@
+-127.0.0.1 - - [15/Sep/2020:09:36:17 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/ HTTP/1.1" 200 18463 http-bio-8070-exec-2 24
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/css/bootstrap.min.css HTTP/1.1" 304 - http-bio-8070-exec-4 7
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 304 - http-bio-8070-exec-3 11
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/css/bootstrap.css HTTP/1.1" 304 - http-bio-8070-exec-5 2
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/img/index/big_ones/1.jpg HTTP/1.1" 304 - http-bio-8070-exec-7 4
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/img//index/big_ones/2.jpg HTTP/1.1" 304 - http-bio-8070-exec-6 4
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/img//index/big_ones/3.jpg HTTP/1.1" 304 - http-bio-8070-exec-8 4
+-127.0.0.1 - - [15/Sep/2020:09:36:18 +0800] "GET /flyCinema/img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg HTTP/1.1" 304 - http-bio-8070-exec-10 5
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/fonts/glyphicons-halflings-regular.woff2 HTTP/1.1" 200 18028 http-bio-8070-exec-9 7
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/header.html HTTP/1.1" 200 1603 http-bio-8070-exec-9 3
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/footer.html HTTP/1.1" 304 - http-bio-8070-exec-8 2
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 304 - http-bio-8070-exec-9 3
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 304 - http-bio-8070-exec-10 4
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 11
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 13
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 11
+-127.0.0.1 - - [15/Sep/2020:09:36:19 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 8
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/register.html HTTP/1.1" 200 6859 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/js/jquery.validate.min.js HTTP/1.1" 304 - http-bio-8070-exec-9 5
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/img/register/1.jpg HTTP/1.1" 200 2396700 http-bio-8070-exec-9 49
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:36:24 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:36:25 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 373 http-bio-8070-exec-8 1201
+-127.0.0.1 - - [15/Sep/2020:09:36:35 +0800] "GET /travel/user/checkUsername?username=sqs123 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:36:37 +0800] "GET /travel/user/checkUsername?username=sqs123 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:36:59 +0800] "GET /travel/CheckCheckServlet?check_code=7 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:00 +0800] "GET /travel/CheckCheckServlet?check_code=73 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:00 +0800] "GET /travel/CheckCheckServlet?check_code=734 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:01 +0800] "GET /travel/CheckCheckServlet?check_code=734a HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:03 +0800] "GET /travel/CheckCheckServlet?check_code=734a HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:03 +0800] "GET /travel/user/checkUsername?username=sqs123 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:03 +0800] "GET /travel/CheckCheckServlet?check_code=734a HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:06 +0800] "GET /travel/user/checkUsername?username=sqs123 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:06 +0800] "GET /travel/CheckCheckServlet?check_code=734a HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:15 +0800] "GET /travel/user/checkUsername?username=sqssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:15 +0800] "GET /travel/user/checkUsername?username=sqsssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:15 +0800] "GET /travel/user/checkUsername?username=sqssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:16 +0800] "GET /travel/user/checkUsername?username=sqsssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:16 +0800] "GET /travel/user/checkUsername?username=sqssssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:17 +0800] "GET /travel/user/checkUsername?username=sqssssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:17 +0800] "GET /travel/user/checkUsername?username=sqssssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:17 +0800] "GET /travel/CheckCheckServlet?check_code=734a HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:19 +0800] "GET /flyCinema/checkCode?1600133839143 HTTP/1.1" 200 404 http-bio-8070-exec-9 10
+-127.0.0.1 - - [15/Sep/2020:09:37:23 +0800] "GET /travel/CheckCheckServlet?check_code=b HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:24 +0800] "GET /travel/CheckCheckServlet?check_code=5 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:25 +0800] "GET /travel/CheckCheckServlet?check_code=5b HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:27 +0800] "GET /travel/CheckCheckServlet?check_code=5b9 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:29 +0800] "GET /travel/CheckCheckServlet?check_code=5b98 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:30 +0800] "GET /travel/CheckCheckServlet?check_code=5b98 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:30 +0800] "GET /travel/user/checkUsername?username=sqssssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:30 +0800] "GET /travel/CheckCheckServlet?check_code=5b98 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:36 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-9 3
+-127.0.0.1 - - [15/Sep/2020:09:37:36 +0800] "GET /flyCinema/js/jquery.validate.min.js HTTP/1.1" 304 - http-bio-8070-exec-6 2
+-127.0.0.1 - - [15/Sep/2020:09:37:36 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 304 - http-bio-8070-exec-10 2
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/js/jquery-3.3.1.js HTTP/1.1" 304 - http-bio-8070-exec-9 153
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 380 http-bio-8070-exec-9 13
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 304 - http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 1
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 304 - http-bio-8070-exec-6 2
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
+-127.0.0.1 - - [15/Sep/2020:09:37:37 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:37:49 +0800] "GET /travel/CheckCheckServlet?check_code=E3C8 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:49 +0800] "GET /travel/user/checkUsername?username=sqssssssss HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:37:49 +0800] "GET /travel/CheckCheckServlet?check_code=E3C8 HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:38:43 +0800] "GET /travel/user/checkUsername?username=asasdad HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:38:43 +0800] "GET /travel/user/checkUsername?username=asasdada HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:38:43 +0800] "GET /travel/user/checkUsername?username=asasdada HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:38:43 +0800] "GET /travel/user/checkUsername?username=asasdadas HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:38:43 +0800] "GET /travel/user/checkUsername?username=asasdadas HTTP/1.1" 404 - http-bio-8070-exec-9 0
+-127.0.0.1 - - [15/Sep/2020:09:39:49 +0800] "GET /flyCinema/register.html HTTP/1.1" 200 6760 http-bio-8070-exec-3 4
+-127.0.0.1 - - [15/Sep/2020:09:39:49 +0800] "GET /flyCinema/js/jquery-3.3.1.js HTTP/1.1" 304 - http-bio-8070-exec-3 3
+-127.0.0.1 - - [15/Sep/2020:09:39:49 +0800] "GET /flyCinema/js/jquery.validate.min.js HTTP/1.1" 304 - http-bio-8070-exec-6 3
+-127.0.0.1 - - [15/Sep/2020:09:39:49 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 304 - http-bio-8070-exec-10 2
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 383 http-bio-8070-exec-6 13
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 304 - http-bio-8070-exec-6 2
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 304 - http-bio-8070-exec-10 3
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 1
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:09:39:50 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 0
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/js/jquery-3.3.1.js HTTP/1.1" 304 - http-bio-8070-exec-10 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/js/jquery.validate.min.js HTTP/1.1" 304 - http-bio-8070-exec-6 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 304 - http-bio-8070-exec-10 0
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 383 http-bio-8070-exec-6 10
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 304 - http-bio-8070-exec-10 2
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 304 - http-bio-8070-exec-6 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:09:39:51 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 0
+-127.0.0.1 - - [15/Sep/2020:09:39:56 +0800] "GET /travel/user/checkUsername?username=aaaaaa HTTP/1.1" 404 - http-bio-8070-exec-3 0
+-127.0.0.1 - - [15/Sep/2020:09:39:56 +0800] "GET /travel/user/checkUsername?username=aaaaaa HTTP/1.1" 404 - http-bio-8070-exec-3 0
+-127.0.0.1 - - [15/Sep/2020:09:39:56 +0800] "GET /travel/CheckCheckServlet?check_code=E3C8 HTTP/1.1" 404 - http-bio-8070-exec-3 0
+-127.0.0.1 - - [15/Sep/2020:09:44:57 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
+-127.0.0.1 - - [15/Sep/2020:09:44:57 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 6
+-127.0.0.1 - - [15/Sep/2020:09:44:57 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 12
+-127.0.0.1 - - [15/Sep/2020:09:44:57 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 5
+-127.0.0.1 - - [15/Sep/2020:09:44:57 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 9
+-127.0.0.1 - - [15/Sep/2020:09:45:00 +0800] "GET /flyCinema/register.html HTTP/1.1" 200 6768 http-bio-8070-exec-8 4
+-127.0.0.1 - - [15/Sep/2020:09:45:01 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-5 4
+-127.0.0.1 - - [15/Sep/2020:09:45:01 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:45:01 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
+-127.0.0.1 - - [15/Sep/2020:09:45:01 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:09:45:01 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
+-127.0.0.1 - - [15/Sep/2020:09:45:01 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 381 http-bio-8070-exec-8 830
+-127.0.0.1 - - [15/Sep/2020:09:45:07 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 811
+-127.0.0.1 - - [15/Sep/2020:09:45:13 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 6038
+-127.0.0.1 - - [15/Sep/2020:09:45:41 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6 HTTP/1.1" 200 42 http-bio-8070-exec-2 245
+-127.0.0.1 - - [15/Sep/2020:09:45:42 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6C HTTP/1.1" 200 42 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:09:45:43 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6Ce HTTP/1.1" 200 42 http-bio-8070-exec-2 2
+-127.0.0.1 - - [15/Sep/2020:09:45:44 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6Ce0 HTTP/1.1" 200 42 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:09:45:45 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6Ce0 HTTP/1.1" 200 42 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:09:45:52 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 6037
+-127.0.0.1 - - [15/Sep/2020:09:45:52 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6Ce0 HTTP/1.1" 200 42 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:09:46:19 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 6032
+-127.0.0.1 - - [15/Sep/2020:09:46:41 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 6044
+-127.0.0.1 - - [15/Sep/2020:09:46:47 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 6045
+-127.0.0.1 - - [15/Sep/2020:09:46:47 +0800] "GET /flyCinema/CodeCheckServlet?check_code=6Ce0 HTTP/1.1" 200 42 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:09:47:00 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 6032
+-127.0.0.1 - - [15/Sep/2020:09:52:29 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
+-127.0.0.1 - - [15/Sep/2020:09:52:29 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 30
+-127.0.0.1 - - [15/Sep/2020:09:52:29 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 31
+-127.0.0.1 - - [15/Sep/2020:09:52:29 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 19
+-127.0.0.1 - - [15/Sep/2020:09:52:29 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 26
+-127.0.0.1 - - [15/Sep/2020:09:52:32 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaaaa HTTP/1.1" 200 - http-bio-8070-exec-6 830
+-127.0.0.1 - - [15/Sep/2020:09:52:33 +0800] "GET /flyCinema/register.html HTTP/1.1" 200 6767 http-bio-8070-exec-8 6
+-127.0.0.1 - - [15/Sep/2020:09:52:34 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 2
+-127.0.0.1 - - [15/Sep/2020:09:52:34 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
+-127.0.0.1 - - [15/Sep/2020:09:52:34 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
+-127.0.0.1 - - [15/Sep/2020:09:52:34 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:09:52:34 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 392 http-bio-8070-exec-9 825
+-127.0.0.1 - - [15/Sep/2020:09:52:46 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-3 6034
+-127.0.0.1 - - [15/Sep/2020:10:12:23 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
+-127.0.0.1 - - [15/Sep/2020:10:12:24 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-3 18
+-127.0.0.1 - - [15/Sep/2020:10:12:24 +0800] "GET /flyCinema/css/bootstrap.min.css HTTP/1.1" 200 16384 http-bio-8070-exec-5 10
+-127.0.0.1 - - [15/Sep/2020:10:12:24 +0800] "GET /flyCinema/css/login.css HTTP/1.1" 200 2099 http-bio-8070-exec-4 174
+-127.0.0.1 - - [15/Sep/2020:10:12:25 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 12
+-127.0.0.1 - - [15/Sep/2020:10:12:25 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 12
+-127.0.0.1 - - [15/Sep/2020:10:12:25 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 9
+-127.0.0.1 - - [15/Sep/2020:10:12:25 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 7
+-127.0.0.1 - - [15/Sep/2020:10:12:37 +0800] "GET /flyCinema/register.html HTTP/1.1" 200 6765 http-bio-8070-exec-10 4
+-127.0.0.1 - - [15/Sep/2020:10:12:37 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-10 2
+-127.0.0.1 - - [15/Sep/2020:10:12:37 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 2
+-127.0.0.1 - - [15/Sep/2020:10:12:37 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:10:12:37 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 2
+-127.0.0.1 - - [15/Sep/2020:10:12:37 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:10:12:38 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 389 http-bio-8070-exec-1 933
+-127.0.0.1 - - [15/Sep/2020:10:12:46 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-2 682
+-127.0.0.1 - - [15/Sep/2020:10:12:52 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-3 6037
+-127.0.0.1 - - [15/Sep/2020:10:13:19 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=9 HTTP/1.1" 200 42 http-bio-8070-exec-8 232
+-127.0.0.1 - - [15/Sep/2020:10:13:20 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=9B HTTP/1.1" 200 42 http-bio-8070-exec-2 2
+-127.0.0.1 - - [15/Sep/2020:10:13:21 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=9B3 HTTP/1.1" 200 42 http-bio-8070-exec-3 1
+-127.0.0.1 - - [15/Sep/2020:10:13:21 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=9B3b HTTP/1.1" 200 41 http-bio-8070-exec-8 1
+-127.0.0.1 - - [15/Sep/2020:10:13:22 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=9B3b HTTP/1.1" 200 41 http-bio-8070-exec-2 1
+-127.0.0.1 - - [15/Sep/2020:10:13:29 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-3 6036
+-127.0.0.1 - - [15/Sep/2020:10:13:29 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=9B3b HTTP/1.1" 200 41 http-bio-8070-exec-8 2
+-127.0.0.1 - - [15/Sep/2020:10:24:02 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
+-127.0.0.1 - - [15/Sep/2020:10:24:02 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-3 4
+-127.0.0.1 - - [15/Sep/2020:10:24:03 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 16
+-127.0.0.1 - - [15/Sep/2020:10:24:03 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 5
+-127.0.0.1 - - [15/Sep/2020:10:24:03 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 5
+-127.0.0.1 - - [15/Sep/2020:10:24:03 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 6
+-127.0.0.1 - - [15/Sep/2020:10:24:14 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-10 4
+-127.0.0.1 - - [15/Sep/2020:10:24:14 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 2
+-127.0.0.1 - - [15/Sep/2020:10:24:14 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
+-127.0.0.1 - - [15/Sep/2020:10:24:14 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
+-127.0.0.1 - - [15/Sep/2020:10:24:14 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 2
+-127.0.0.1 - - [15/Sep/2020:10:24:15 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 391 http-bio-8070-exec-8 895
+-127.0.0.1 - - [15/Sep/2020:10:24:21 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-9 707
+-127.0.0.1 - - [15/Sep/2020:10:24:27 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-10 6032
++127.0.0.1 - - [15/Sep/2020:11:12:44 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
++127.0.0.1 - - [15/Sep/2020:11:12:44 +0800] "GET /flyCinema/ HTTP/1.1" 304 - http-bio-8070-exec-2 32
++127.0.0.1 - - [15/Sep/2020:11:12:44 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-3 10
++127.0.0.1 - - [15/Sep/2020:11:12:44 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 200 192 http-bio-8070-exec-5 10
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8070-exec-10 0
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/header.html HTTP/1.1" 200 2049 http-bio-8070-exec-10 3
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/js/getParameter.js?_=1600139564973 HTTP/1.1" 200 247 http-bio-8070-exec-7 3
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 200 6554 http-bio-8070-exec-10 13
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 7
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 15
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 3
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 5
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 200 3024 http-bio-8070-exec-3 34
++127.0.0.1 - - [15/Sep/2020:11:12:45 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-5 405
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-7 2
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-1 3
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-5 1
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 2
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 1
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 1
++127.0.0.1 - - [15/Sep/2020:11:12:48 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:11:12:49 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 392 http-bio-8070-exec-8 949
++127.0.0.1 - - [15/Sep/2020:11:12:55 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-5 683
++127.0.0.1 - - [15/Sep/2020:11:12:55 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-7 24
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/ HTTP/1.1" 200 20276 http-bio-8070-exec-2 26
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-4 7
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/css/login.css HTTP/1.1" 200 2099 http-bio-8070-exec-3 7
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/css/bootstrap.min.css HTTP/1.1" 200 242120 http-bio-8070-exec-5 97
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/css/bootstrap.css HTTP/1.1" 304 - http-bio-8070-exec-7 111
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/img/index/big_ones/1.jpg HTTP/1.1" 304 - http-bio-8070-exec-10 11
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/img//index/big_ones/3.jpg HTTP/1.1" 304 - http-bio-8070-exec-7 10
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/img//index/big_ones/2.jpg HTTP/1.1" 304 - http-bio-8070-exec-8 12
++127.0.0.1 - - [15/Sep/2020:11:23:56 +0800] "GET /flyCinema/img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg HTTP/1.1" 304 - http-bio-8070-exec-2 9
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/fonts/glyphicons-halflings-regular.woff2 HTTP/1.1" 304 - http-bio-8070-exec-10 3
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/header.html HTTP/1.1" 304 - http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/js/getParameter.js?_=1600140237316 HTTP/1.1" 200 247 http-bio-8070-exec-3 3
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 5
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 10
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 304 - http-bio-8070-exec-5 4
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 13
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 12
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 304 - http-bio-8070-exec-3 5
++127.0.0.1 - - [15/Sep/2020:11:23:57 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-7 298
++127.0.0.1 - - [15/Sep/2020:11:23:59 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-7 2
++127.0.0.1 - - [15/Sep/2020:11:23:59 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-7 2
++127.0.0.1 - - [15/Sep/2020:11:23:59 +0800] "GET /flyCinema/js/jquery.validate.min.js HTTP/1.1" 304 - http-bio-8070-exec-1 102
++127.0.0.1 - - [15/Sep/2020:11:23:59 +0800] "GET /flyCinema/img/register/1.jpg HTTP/1.1" 304 - http-bio-8070-exec-6 4
++127.0.0.1 - - [15/Sep/2020:11:24:00 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 1
++127.0.0.1 - - [15/Sep/2020:11:24:00 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 1
++127.0.0.1 - - [15/Sep/2020:11:24:00 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 1
++127.0.0.1 - - [15/Sep/2020:11:24:00 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 1
++127.0.0.1 - - [15/Sep/2020:11:24:00 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-1 2
++127.0.0.1 - - [15/Sep/2020:11:24:00 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 385 http-bio-8070-exec-2 950
++127.0.0.1 - - [15/Sep/2020:11:24:05 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 61 http-bio-8070-exec-8 788
++127.0.0.1 - - [15/Sep/2020:11:24:05 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 61 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:09 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 61 http-bio-8070-exec-6 8
++127.0.0.1 - - [15/Sep/2020:11:24:17 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 61 http-bio-8070-exec-8 7
++127.0.0.1 - - [15/Sep/2020:11:24:28 +0800] "GET /flyCinema/user/CheckUser?username=asdfgh HTTP/1.1" 200 61 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:28 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 6
++127.0.0.1 - - [15/Sep/2020:11:24:29 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:29 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:31 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:33 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:11:24:36 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d HTTP/1.1" 200 42 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:37 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1 HTTP/1.1" 200 42 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:39 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1a HTTP/1.1" 200 42 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:39 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1ae HTTP/1.1" 200 41 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:11:24:40 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1ae HTTP/1.1" 200 41 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:11:24:40 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 4
++127.0.0.1 - - [15/Sep/2020:11:24:40 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1ae HTTP/1.1" 200 41 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:11:24:41 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:11:24:41 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1ae HTTP/1.1" 200 41 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:11:24:41 +0800] "GET /flyCinema/user/CheckUser?username=asdfghj HTTP/1.1" 200 61 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:11:24:41 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=d1ae HTTP/1.1" 200 41 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:11:34:52 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
++127.0.0.1 - - [15/Sep/2020:11:34:52 +0800] "GET /flyCinema/ HTTP/1.1" 200 20276 http-bio-8070-exec-2 36
++127.0.0.1 - - [15/Sep/2020:11:34:52 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-3 6
++127.0.0.1 - - [15/Sep/2020:11:34:52 +0800] "GET /flyCinema/css/login.css HTTP/1.1" 200 2099 http-bio-8070-exec-4 5
++127.0.0.1 - - [15/Sep/2020:11:34:52 +0800] "GET /flyCinema/css/bootstrap.min.css HTTP/1.1" 200 16384 http-bio-8070-exec-6 7
++127.0.0.1 - - [15/Sep/2020:11:34:52 +0800] "GET /flyCinema/img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg HTTP/1.1" 200 12783 http-bio-8070-exec-9 5
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/header.html HTTP/1.1" 304 - http-bio-8070-exec-10 7
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 9
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 15
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 7
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 9
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/js/getParameter.js?_=1600140893129 HTTP/1.1" 200 247 http-bio-8070-exec-2 4
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8070-exec-2 0
++127.0.0.1 - - [15/Sep/2020:11:34:53 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-2 355
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-2 2
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-2 2
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 1
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 2
++127.0.0.1 - - [15/Sep/2020:11:34:56 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:11:34:57 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 398 http-bio-8070-exec-7 999
++127.0.0.1 - - [15/Sep/2020:11:35:02 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-3 766
++127.0.0.1 - - [15/Sep/2020:11:35:02 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 - http-bio-8070-exec-10 28
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-2 58
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg HTTP/1.1" 200 12783 http-bio-8070-exec-4 44
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 200 192 http-bio-8070-exec-3 44
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8070-exec-9 0
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/js/getParameter.js?_=1600141087632 HTTP/1.1" 200 247 http-bio-8070-exec-1 4
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 11
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 6
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 10
++127.0.0.1 - - [15/Sep/2020:11:38:07 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-7 3
++127.0.0.1 - - [15/Sep/2020:11:38:08 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-8 485
++127.0.0.1 - - [15/Sep/2020:11:38:09 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-4 4
++127.0.0.1 - - [15/Sep/2020:11:38:10 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 1
++127.0.0.1 - - [15/Sep/2020:11:38:10 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:11:38:10 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 1
++127.0.0.1 - - [15/Sep/2020:11:38:10 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:11:38:10 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-9 2
++127.0.0.1 - - [15/Sep/2020:11:38:10 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 388 http-bio-8070-exec-5 1053
++127.0.0.1 - - [15/Sep/2020:11:38:16 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 41 http-bio-8070-exec-10 785
++127.0.0.1 - - [15/Sep/2020:11:38:16 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 41 http-bio-8070-exec-9 4
++127.0.0.1 - - [15/Sep/2020:11:38:33 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=1 HTTP/1.1" 200 42 http-bio-8070-exec-4 3
++127.0.0.1 - - [15/Sep/2020:11:38:33 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=19 HTTP/1.1" 200 42 http-bio-8070-exec-10 4
++127.0.0.1 - - [15/Sep/2020:11:38:34 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=19E HTTP/1.1" 200 42 http-bio-8070-exec-9 3
++127.0.0.1 - - [15/Sep/2020:11:38:35 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=19Ed HTTP/1.1" 200 41 http-bio-8070-exec-4 2
++127.0.0.1 - - [15/Sep/2020:11:38:36 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=19Ed HTTP/1.1" 200 41 http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:11:38:36 +0800] "GET /flyCinema/user/CheckUser?username=aaaaaa HTTP/1.1" 200 41 http-bio-8070-exec-9 3
++127.0.0.1 - - [15/Sep/2020:11:38:36 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=19Ed HTTP/1.1" 200 41 http-bio-8070-exec-4 2
++127.0.0.1 - - [15/Sep/2020:11:38:36 +0800] "POST /flyCinema/user/regUser HTTP/1.1" 200 41 http-bio-8070-exec-10 207
++127.0.0.1 - - [15/Sep/2020:11:38:36 +0800] "GET /flyCinema/register_ok.html HTTP/1.1" 200 856 http-bio-8070-exec-9 12
++127.0.0.1 - - [15/Sep/2020:11:38:37 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 2
++127.0.0.1 - - [15/Sep/2020:11:38:37 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:11:38:37 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 1
++127.0.0.1 - - [15/Sep/2020:11:38:37 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 2
++127.0.0.1 - - [15/Sep/2020:11:38:37 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:12:40:57 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
++127.0.0.1 - - [15/Sep/2020:12:40:57 +0800] "GET /flyCinema/ HTTP/1.1" 200 20276 http-bio-8070-exec-2 41
++127.0.0.1 - - [15/Sep/2020:12:40:57 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-3 6
++127.0.0.1 - - [15/Sep/2020:12:40:57 +0800] "GET /flyCinema/img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg HTTP/1.1" 200 12783 http-bio-8070-exec-7 5
++127.0.0.1 - - [15/Sep/2020:12:40:57 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 200 192 http-bio-8070-exec-6 5
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/header.html HTTP/1.1" 304 - http-bio-8070-exec-9 9
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/footer.html HTTP/1.1" 304 - http-bio-8070-exec-1 53
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/js/getParameter.js?_=1600144858084 HTTP/1.1" 200 247 http-bio-8070-exec-9 3
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 5
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 10
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 1
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:12:40:58 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-6 412
++127.0.0.1 - - [15/Sep/2020:12:41:00 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-4 2
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/js/getParameter.js HTTP/1.1" 200 247 http-bio-8070-exec-4 1
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:12:41:01 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:12:41:02 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 397 http-bio-8070-exec-6 1058
++127.0.0.1 - - [15/Sep/2020:12:41:10 +0800] "GET /flyCinema/user/CheckUser?username=ffffff HTTP/1.1" 200 41 http-bio-8070-exec-8 805
++127.0.0.1 - - [15/Sep/2020:12:41:25 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=bd6g HTTP/1.1" 200 41 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:12:41:25 +0800] "GET /flyCinema/user/CheckUser?username=ffffff HTTP/1.1" 200 41 http-bio-8070-exec-8 3
++127.0.0.1 - - [15/Sep/2020:12:41:25 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=bd6g HTTP/1.1" 200 41 http-bio-8070-exec-8 1
++127.0.0.1 - - [15/Sep/2020:12:41:25 +0800] "POST /flyCinema/user/regUser HTTP/1.1" 200 41 http-bio-8070-exec-8 305
++127.0.0.1 - - [15/Sep/2020:12:41:26 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:12:41:26 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 1
++127.0.0.1 - - [15/Sep/2020:12:41:26 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 2
++127.0.0.1 - - [15/Sep/2020:12:41:26 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:12:41:26 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-10 1
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-1 0
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/img/index/movies/1f091e675ef773f5e947030fc0838e1b333631.jpg HTTP/1.1" 200 12783 http-bio-8070-exec-5 47
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/js/include.js HTTP/1.1" 200 192 http-bio-8070-exec-4 47
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-2 95
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8070-exec-10 0
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/header.html HTTP/1.1" 200 2049 http-bio-8070-exec-3 5
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/footer.html HTTP/1.1" 200 1514 http-bio-8070-exec-4 3
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/js/getParameter.js?_=1600145387490 HTTP/1.1" 200 247 http-bio-8070-exec-5 4
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 10
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 2
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 2
++127.0.0.1 - - [15/Sep/2020:12:49:47 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 2
++127.0.0.1 - - [15/Sep/2020:12:49:48 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-5 436
++127.0.0.1 - - [15/Sep/2020:12:50:01 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 3
++127.0.0.1 - - [15/Sep/2020:12:50:01 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 2
++127.0.0.1 - - [15/Sep/2020:12:50:01 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 1
++127.0.0.1 - - [15/Sep/2020:12:50:01 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-6 2
++127.0.0.1 - - [15/Sep/2020:12:50:01 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-6 1
++127.0.0.1 - - [15/Sep/2020:12:50:02 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 354 http-bio-8070-exec-5 803
++127.0.0.1 - - [15/Sep/2020:12:50:09 +0800] "GET /flyCinema/user/CheckUser?username=qqqqqqqq HTTP/1.1" 200 41 http-bio-8070-exec-5 747
++127.0.0.1 - - [15/Sep/2020:12:50:46 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=5e3c HTTP/1.1" 200 41 http-bio-8070-exec-5 3
++127.0.0.1 - - [15/Sep/2020:12:50:46 +0800] "GET /flyCinema/user/CheckUser?username=qqqqqqqq HTTP/1.1" 200 41 http-bio-8070-exec-5 3
++127.0.0.1 - - [15/Sep/2020:12:50:46 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=5e3c HTTP/1.1" 200 41 http-bio-8070-exec-5 2
++127.0.0.1 - - [15/Sep/2020:12:51:02 +0800] "GET /flyCinema/user/CheckUser?username=qqqqqqqq HTTP/1.1" 200 42 http-bio-8070-exec-10 23
++127.0.0.1 - - [15/Sep/2020:12:51:02 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=5e3c HTTP/1.1" 200 41 http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:12:51:06 +0800] "POST /flyCinema/user/regUser HTTP/1.1" 200 41 http-bio-8070-exec-5 20204
++127.0.0.1 - - [15/Sep/2020:12:51:06 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 2
++127.0.0.1 - - [15/Sep/2020:12:51:06 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++127.0.0.1 - - [15/Sep/2020:12:51:06 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 2
++127.0.0.1 - - [15/Sep/2020:12:51:06 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 2
++127.0.0.1 - - [15/Sep/2020:12:51:07 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-5 0
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-3 0
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/ HTTP/1.1" 304 - http-bio-8070-exec-4 32
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-5 12
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8070-exec-8 0
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/header.html HTTP/1.1" 200 2049 http-bio-8070-exec-10 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 11
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/js/getParameter.js?_=1600145774303 HTTP/1.1" 200 247 http-bio-8070-exec-4 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 200 6554 http-bio-8070-exec-10 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 200 3024 http-bio-8070-exec-3 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:14 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-10 377
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/register.html HTTP/1.1" 304 - http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/css/register.css HTTP/1.1" 200 2025 http-bio-8070-exec-10 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:16 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-2 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:17 +0800] "GET /flyCinema/checkCode HTTP/1.1" 200 378 http-bio-8070-exec-3 828
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:25 +0800] "GET /flyCinema/user/CheckUser?username=qwqwqw HTTP/1.1" 200 41 http-bio-8070-exec-3 763
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:41 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=f6fc HTTP/1.1" 200 41 http-bio-8070-exec-3 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:41 +0800] "GET /flyCinema/user/CheckUser?username=qwqwqw HTTP/1.1" 200 41 http-bio-8070-exec-3 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:41 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=f6fc HTTP/1.1" 200 41 http-bio-8070-exec-3 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:43 +0800] "GET /flyCinema/user/CheckUser?username=qwqwqw HTTP/1.1" 200 42 http-bio-8070-exec-1 24
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:43 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=f6fc HTTP/1.1" 200 41 http-bio-8070-exec-1 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:43 +0800] "GET /flyCinema/user/CheckUser?username=qwqwqw HTTP/1.1" 200 42 http-bio-8070-exec-1 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:56:43 +0800] "GET /flyCinema/CodeCheckServlet?checkCode=f6fc HTTP/1.1" 200 41 http-bio-8070-exec-1 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "POST /flyCinema/user/regUser HTTP/1.1" 200 41 http-bio-8070-exec-3 19911
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/user/CheckUser?username=qwqwqw HTTP/1.1" 200 42 http-bio-8070-exec-3 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/header.html HTTP/1.1" 200 2049 http-bio-8070-exec-3 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:01 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-9 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:06 +0800] "GET /flyCinema/user/active?code=402021acb0754a28967b0ded0e34461c HTTP/1.1" 200 - http-bio-8070-exec-9 364
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:34 +0800] "GET /flyCinema/user/active?code=402021acb0754a28967b0ded0e34461c HTTP/1.1" 200 - http-bio-8070-exec-4 30
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:57:34 +0800] "GET /favicon.ico HTTP/1.1" 404 - http-bio-8070-exec-3 0
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:58:11 +0800] "GET /flyCinema/user/active?code=402021acb0754a28967b0ded0e34461c HTTP/1.1" 200 - http-bio-8070-exec-2 30
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:12:58:14 +0800] "GET /flyCinema/user/active?code=402021acb0754a28967b0ded0e34461c HTTP/1.1" 200 - http-bio-8070-exec-2 31
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/user/active?code=402021acb0754a28967b0ded0e34461c HTTP/1.1" 302 - http-bio-8070-exec-1 841
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/login.html HTTP/1.1" 200 3811 http-bio-8070-exec-2 114
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/css/common.css HTTP/1.1" 200 4813 http-bio-8070-exec-3 6
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/%E6%88%91%E4%BB%AC%E7%9A%84logo HTTP/1.1" 404 1033 http-bio-8070-exec-6 10
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/img/login/1.jpg HTTP/1.1" 304 - http-bio-8070-exec-7 19
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/header.html HTTP/1.1" 200 2049 http-bio-8070-exec-8 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/js/getParameter.js?_=1600146042828 HTTP/1.1" 200 247 http-bio-8070-exec-9 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-2 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:42 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-3 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:00:43 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-9 225
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:08 +0800] "POST /flyCinema/user/userLogin HTTP/1.1" 200 41 http-bio-8070-exec-2 172
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/index.html HTTP/1.1" 200 20276 http-bio-8070-exec-3 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/css/bootstrap.min.css HTTP/1.1" 200 16384 http-bio-8070-exec-3 92
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/js/getParameter.js?_=1600146069730 HTTP/1.1" 200 247 http-bio-8070-exec-4 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 6
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-5 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:09 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 181 http-bio-8070-exec-4 7
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/%E6%88%91%E4%BB%AC%E7%9A%84logo HTTP/1.1" 404 1033 http-bio-8070-exec-5 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/js/getParameter.js?_=1600146077429 HTTP/1.1" 200 247 http-bio-8070-exec-8 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-1 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-4 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:17 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 181 http-bio-8070-exec-10 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:23 +0800] "POST /flyCinema/user/userLogin HTTP/1.1" 200 41 http-bio-8070-exec-10 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:24 +0800] "GET /flyCinema/js/getParameter.js?_=1600146084424 HTTP/1.1" 200 247 http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:24 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:24 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:24 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-9 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:24 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:24 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 181 http-bio-8070-exec-8 3
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:37 +0800] "GET /flyCinema HTTP/1.1" 302 - http-bio-8070-exec-9 0
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:37 +0800] "GET /flyCinema/ HTTP/1.1" 200 20276 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:37 +0800] "GET /flyCinema/img/title.png.jpg HTTP/1.1" 200 6554 http-bio-8070-exec-10 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:37 +0800] "GET /flyCinema/img/hot_tel.jpg HTTP/1.1" 200 3024 http-bio-8070-exec-8 4
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:37 +0800] "GET /flyCinema/js/getParameter.js?_=1600146097905 HTTP/1.1" 200 247 http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:38 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:38 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:38 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:38 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:38 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 181 http-bio-8070-exec-10 5
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/user/exit HTTP/1.1" 302 - http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/%E6%88%91%E4%BB%AC%E7%9A%84logo HTTP/1.1" 404 1033 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/%E6%88%91%E4%BB%AC%E7%9A%84logo HTTP/1.1" 404 1033 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/js/getParameter.js?_=1600146107250 HTTP/1.1" 200 247 http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/images/icon_1.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/images/icon_2.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/images/icon_3.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-10 2
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/images/icon_4.jpg HTTP/1.1" 404 1005 http-bio-8070-exec-8 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:01:47 +0800] "GET /flyCinema/user/isLogin HTTP/1.1" 200 4 http-bio-8070-exec-10 1
++0:0:0:0:0:0:0:1 - - [15/Sep/2020:13:02:01 +0800] "POST /flyCinema/user/userLogin HTTP/1.1" 200 41 http-bio-8070-exec-10 4
+Index: src/main/resources/druid.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>GBK
+===================================================================
+--- src/main/resources/druid.properties	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
++++ src/main/resources/druid.properties	(revision e8dd0af62c27e60f1c3ca50beab205a3d5fa779c)
+@@ -1,7 +1,7 @@
+ driverClassName=com.mysql.cj.jdbc.Driver
+ url = jdbc:mysql://127.0.0.1:3306/flycinema?serverTimezone=UTC
+-username=root
+-password=root
++username=liuliudr
++password=123456
+ initialSize=5
+ maxActive=10
+ maxWait=3000
+\ No newline at end of file
+Index: target/classes/druid.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>GBK
+===================================================================
+--- target/classes/druid.properties	(revision b17d2411c9838be174a130b2bbef187602c8b7f9)
++++ target/classes/druid.properties	(revision e8dd0af62c27e60f1c3ca50beab205a3d5fa779c)
+@@ -1,7 +1,7 @@
+ driverClassName=com.mysql.cj.jdbc.Driver
+ url = jdbc:mysql://127.0.0.1:3306/flycinema?serverTimezone=UTC
+-username=root
+-password=root
++username=liuliudr
++password=123456
+ initialSize=5
+ maxActive=10
+ maxWait=3000
+\ No newline at end of file
+diff --git target/classes/com/cn/flyCinema/dao/UserDao.class target/classes/com/cn/flyCinema/dao/UserDao.class
+index fc0946c682bde85cd189bad84b1e1aa492a82525..b98c4da6b42f0ff55729265c8781f8c958bd7b09
+GIT binary patch
+literal 440
+zc$|%nL2JT55QX1ZO>CN4d+5zeZ+huM>CKypPzY5Jy-zo*tR$NfS0R6`2Y*0+lynmc
+z9u(~y=E3mId++D)y$A4yM;{M9+JtbaO+4SId{E4%gi$wI^NvNrW+i4e*Jjl}z4RiP
+zr9v99Op2j4DrKRJ)wU3&Q=i~-T$vJ{yO-JCJE3*#@WH7fyq;-sH8a?L#cb6-V;2OE
+zrPVtZ_jE4K^$KR$HkWFw69<Lm--xr95+!s_>|@TvA46y#4JV&#C9Ovw)KE^NPPjoG
+ZaN2-ZsgGu*w+Je|L+D7tz1uakegQOUdu0Fs
+
+diff --git target/classes/com/cn/flyCinema/dao/impl/UserDaoImpl.class target/classes/com/cn/flyCinema/dao/impl/UserDaoImpl.class
+index 8da0bf7763cd274a69c7643a67235cb247cf25e6..25ba7875b48e539bf3f0d093d9e0bbbc542e4a34
+GIT binary patch
+literal 2991
+zc$~FXTXWM^5dMyDGL8tw1VbnkkrrYbgShnq385qbn&5;K6R4pSWLt3*Y{^J+f_r=D
+zzvvI>^ra6l(?Tgjr_cRQ?Q~aC96Rv@`q0T_ceUE<clNCH*FV4i0pJ|IOCW(M3DXH&
+z!PNvpxV8g_@M#<~5@sb_Pe4LJ!W_SvA0Uq#Ocvt!EP*&~GAS~-#blAmZ6<e^e9olA
+zo_FK8$NY;p?z8gCI37rNC_xhlt+)dDf@RlKr)e8zZOPUe`kG}wQdg?widwO3U7aQA
+zmfmRAHCG=Kh>aVj;Z6vIGuhh$ktwUH3+yTwras?lly&=-R<4sKRj?{r{kCQs{2VAF
+z?y}(sj20?ZL#>$VQoTJzjtxz%YL;qH5_Qqh?P<-LA(^ttONLox)nt2dL0~#lSkYEB
+zwXT^pwdiumV_P-Zt>JakHQcrroTA2C#7%0I%iQ8l@0*(A5DZo7(s^8`y4gV>=^M9P
+zqplVV$0gHrZ=3DrdaI{4*^X~t)C9%aS#-6^qdBeVg^*B|P!W){s)vBUk<9invNHnj
+zzNz<U#cG*!?1GF3H_)B;&^Xfv-#4O}Xf>-e8*f=7%}h+IxW+1_+uJW4)fK6DLzO66
+zExV#$H5kui*I=AvFBwNLB9MFg>6K8Gp<{_XYcdW)5g2#$x?XXWoU&wF4aH^TAMj}_
+zYs<Q=E9;Y@TvRS8npsuWM}rjtXSdHjscYtfZ8de<ZQr!k=xCb^(!uQ@;_8;E-wkAL
+zlvk)k83tBlJVISY119A*Ofq*B!*s3g!dJC=OLsD6t6tAv>ix^gu+Wt8n28NXhRafm
+z$tsgICQq2O@s+^w|A3B+uknq*eSaFdZ5`e1vCJ!4%@@js?Jiffw)fDDY@R?d>K^Dp
+zCZp;n`4+T5PWMmZxSHE?$ZoVW8u;-f`A2p1t#(eo!(qF?q~~1xiKT1Qd(#CDZwcYO
+zoSmMWS|ouQ*jdxvY0cIA2^ZL($$D4eiAwuM-FQRSYdF*Y4d0}p?h7<kCjdQl^l?kK
+z+X4^!t;_8vwlk$;_X?XQa4frZ|4D{(rO|ZT-tWO(qSP2)?3wIVcYy(VyV%*iLz!&9
+z?aM|Bodq1Dr^_{OS#(>^n66&))(@Lc26IHKo1U)l><H{2vFJ?%l}WPyOO^1Vw;MVy
+z!I(cs0+~KY^#g#HrU&j-%l35w<^KoeUgQ{tMWaf);ShZ`(4MFN5U()$mWYu|yO8L6
+z^mG{!l7KzA7ZABu2$g<A_yr=rBKnNfA-qqNzX*T<GL><ZB-wYtF^m!?Jdh2-y{4~_
+zDDm-BY(Do3q9<NKDy8Btup{~!iBkA@u@uP{pJU)cWH|B?vcM0J#7`I;j)Y%gX9#~H
+z{*?S9Ufw~3iS8nrq=I*QxzG9WgWN3TaNMhB9C?yLWPKhdND7nB0i1+N(M|<b`<m0F
+zIpakR{f$!+&Pq5(-%xQf_y8XUt^7zxMTpO(2Ishyd@}C0@Ep6S3u4J)DN1a2u@obg
+zDwZT-dy1tvv7urq$=bcdS)Hb)_e~u7xr1ri>myB7?!y@N;~Men81{P1`H4F{&QZ-D
+zQCVTkdYy&HGK7z*&oF5(kiTEDP3W`dNNT@datHlLfc|p~6T<T+o_6Z+F@BdQkB8Eg
+zf25OtB*2(${QL_2b4{Fo92bN9-xFkE@AMA@ki|AZw%dm+<wKV2f$SZI=+3iEl^rE|
+zj5-|kDpUOUU8lc}%=w@)feBm+>RAeoFr7N+*Rugb&sq4Hcw+JxqBt8Eq&u0?_$0t!
+PPmpP->kKY?u_pfo>7?Ny
+
+diff --git target/classes/com/cn/flyCinema/entity/Area.class target/classes/com/cn/flyCinema/entity/Area.class
+index 09e30a5489d0c97483bc1d6c4e391139f8658f6e..711eed3d4cf1cb31333430554f1cb30a59045bd9
+GIT binary patch
+literal 987
+zc$|GxU2oE06n@^eK*3HJ;N}NT@Qc#Hs?M7QXQCt~CS+dBEb;QCRP0j9Qj5uA{7;$)
+zOEmEZ_@j*Hw9POBcXK}8^PJ~A=TLtC`SA<DQ|uN{L?e%@xXb1qoBKIDC?JD|j)&}<
+zY)l<3_Lh!q_U#-xIqV3i(i;j?`p5E<w0#+j?AJl$j@+;-papX53Y7mT9!8-TjHsqM
+z+?Rdk1zz-=QnPhL4ZX>b8j5`{a1W;Afg8S+13#viIMP3op~rdps6`*Vj{;kLXEL^(
+zz<%$a_NZ|zZ8wO#=+u4@x{^k9%@yjFHLU=#COw)Y0D-F6TD3~ya54=Y_m#(@@;r2h
+zQ3kGI!$1k^2Fj=ysA64U^CH2^spk*fFzx(I=iE17;}M(3G`?NuEABTre?k{)*PR%0
+z8(RXk%T^aCErz`r9J@|L{qp3*4e0b8b9tBL^-^`+3;2ZXQhd$q{lAO`eP~7c1XU<}
+zA&L|}QtYd7u0rqu$!=1%OJ0!ASZ5I5V%T-E1@eFnjiMVA83_nCaf>_?)KUVUkQ(_a
+z6Ik0bC{}w0)#}WkE%-L5msvEdf&U9EvO)rx+e-RVZjM;Eh$EJ+#1V^U>GboYlO3us
+zYVRj9@6M1d=jPC@?@;E*mkUX(k}EamxKcKf2aSrQFZ3|S+ShY=*>v1u)xGmo@5HG3
+EUx<&$s{jB1
+
+diff --git target/classes/com/cn/flyCinema/entity/Cinema.class target/classes/com/cn/flyCinema/entity/Cinema.class
+index bf0480457826689da32275465777cba1431a6f31..e327275b29fcad77e42f3dd59cb51c9e8ebd87bc
+GIT binary patch
+literal 2617
+zc$}3~ZF3V<6n-|@>~2G#Y5HccO#^6~E@@W*K`9Bg!D6wtNDxIoZId-DlWaOk>cBXD
+z@}Kw%bjFk!b@&1PD93Z|Zny324I`78bIv{YygcVQH~Y`Of4&BA1K+1Hi}f+gV1q@C
+z#XT0EvDjpBpT*}Uw$d2Gx`hX<zhJR#;Y-##7IrN>wD6UMM;7Yrdu-xs6HhcG8-7#6
+z<o0v-N7re)LCe_+242hSt!dB$x8rHZow%$IdVbKNyQIr`rrT`xyndg~ey61&wg0Re
+zP)e%b==P-4d)<S*wnwSP9Y62~Rmv$X69T=~ZBpp?wjX#q2c12y_t>RCPVP3`_7k_~
+z^Eq<rgJ(XqD{eQs9j6gEKeS)gD6!)@UNG<nFP-p2ZGI^!hB`aS+Xnp~Pc$k|XSBRQ
+zjj5V0Eh|Yj`cc4)3NM#1sl<-h#MG%8@h;5%QNVQR?EMjnb#B7lgpp>?(el#$69<mn
+z;$?EIFf8&s3>Rzlk4^H{!!@7A6)&2Dqli<$PS9fwx*<#gQSTn~8s4VQYd#mQag~!Y
+zxQr_qyn}oO7x8Web8OACRba8eqKHcxX64~G4*Yi0>&5kcqSs!@;2V6);wkkn7x|G_
+zmiYV~&0H?h!>&*Q86hK;C1SW-r1#C%Sh*<PINOvg-Z@pQ!qHH8^PAL=J;t}Y_uOj?
+zsG+;R?*+7w71ip_xT1m9r1-Gf8{_9nwb9qOL?4k^`sA2MFwtZsm}{ZuqVs%oE<}1E
+z(nLM!323}0lJC*!I%$n`%6<jycM<kJ$uwyo10CnFC@c|#C6q{Wf#s;c-xO()E^`6<
+z>JSOLJVer78A7-7`j9H;Q$rYb-WbBP^X3rNai2x{!~x^fCrj1@E+B_V`sFc2u%{_z
+z23Kid#_%ZY6JcPB3DAVa6eNVjBqW8!H0Z)&B2vO)Dhy#U875`hR6m@=iK+MliQi&~
+zhHzd~(on`qlw74~24DyZWFiZcvmh$Wgi-MjMl^(mRRKT-l9Yj5Rs#6|AF6;PWgv?p
+zM-7BI<i^*OjOa2DTM6X4nh{+FvPwD52q1G2BR7<cq+}r1lt4aGGm?^l+@zdaBY@0D
+zjNDWLF=QaOl|XK(ffzE7D&^cA0i+NC`B(|Wl!0t0fqbF{V#+`^Dd+wOAPW(Y+gMWo
+zv1A|*ltAvFq5@*cKz1l+cLWgr`*P!I%*d}4!+l=-g|Vlvkj|YuM27#$hd7_R5ZXyn
+z*`-5_=dz(g=gW!EPQ{nG&|$=m$<SfOj;YXLQF``gavWk>p1poz_80N&cSY2v{{fV(
+BqJjVb
+
+diff --git target/classes/com/cn/flyCinema/entity/City.class target/classes/com/cn/flyCinema/entity/City.class
+index 725861f12ad7b056f0392ddf2cf297f295a8b60b..b0ab17e2a1f8474dfc7163d00d31799be8e3fb53
+GIT binary patch
+literal 1286
+zc$|GxQBTuQ6#niy+O2eKj%|Pr87QtB8&$z4ga?<Hm@N2!!SL91b(U-$={gf){7;(5
+zNHp;W_@j*H-qwPpkS6Ecd+zzZ^PO{VfB*UM3&1X3sK{Y63k^@WsVmS`q_LSngZm~o
+zTN$*tZ*#M)z)<j%L9(1a!(#W;{A3zK(;XOZT;Cqp-X25RHAgl>@!H{$?>X*(&g7Sl
+z>-Yx@x}Jc&iD(=XUuWDWzI@kl?ZfG)XM69=-cVE+TjucC^c=nqgK7VxGhukxwZ<dE
+za*Yqe^9}(=reV9j<DVNHGNeS(Ik!Bp{SI%XtTz&yktbn7B}p)+P>AACbX@w6BkEb1
+z{7We7$sK0=aj;`hkH%BavR^yAmn_%1%^@0!SkbV6yoLhqF)YQ2UQL~0-}XY#XS$z#
+z4bSkLn;k0As_|>tuk-z`h7GJSRPUM*L*c5%+uo^d`7{pm?96s)9POl5ZiGTnd$Ih0
+z?autF-nso4>-1W4^n_FN(M-gO#zI~Jy$dXoEz$0T;u86M^AfDNb%9i~bph#{0F=oV
+z=}~h~8X08iTY!oRMQQ;IOIQZPikD$x#S5iGnU%224tahy$ID!itK@-sBF_m@El3JU
+z8SdjjNMJ++-;w$n5y&D~NCa208iEhR7${pb7%yKUOj$5gf~=?~IqZpk7OW)*k>Wy@
+z6NS|1HWGwLaUoU0tllDokCYeQh=jZsBL><(kv_S^Tv47u;nSHRQ_KcyiCm#RgIf4P
+TW`_B=;Pq>Q+mYZ$BJ1&A5@Y6l
+
+diff --git target/classes/com/cn/flyCinema/entity/Indent.class target/classes/com/cn/flyCinema/entity/Indent.class
+index 5c1d43f31ebf5f6c1d0b40e3c024cc7ab5aa2ef0..22eb159b8feb7fa46aea8ccf73c72d5f8ae445fb
+GIT binary patch
+literal 1727
+zc$}S+ZBNr+6o&6-YrC=)7=sN#z=5LM*qFSCFT98@F(Fyx14`n@vej8KI<j>p#F+S#
+zG;t%*#2?^~GM@9afYy!=emT$G({t`~ooDOMU*CQJSjV$C#!wnU63ZOQ9PV>iiD5Mk
+z4J93Ge6DkNpkqVFLmiL!=`n{VF>J=LB@nUe0^`+V^SxPanogs<=eSnGYHtceyZkQN
+z;i%SHtu~$7mhIT?j=+8{r02g=`9lGv(yChmqgC6nUUpB8toAGOs7aYrwN*2lhi2R6
+zXFsX9@9d61wpweQlxt4;ZS$-`jVET=a$MUzBkMXTUL(iuYQu8(Xn}MtAG)mC@!n^`
+z_F@B#3|{k9Xq^i|nS+ar6gp)p-bLx1E9tfl+_vpB1SbBP?qz9s{Gios*Q^&dZ<g@L
+zm$}ZsB<2jHFm7OiLz+Vd;{uaGpXXh>S-0Bc<{5mj>)QslvBTjhQ5LiGgKkUFkwPzK
+z<<Bb1b`9iF5SY9ELIsjngZGb)ts12?^YqkmXw_2g-}V08*eBf#)O&8%*3aZBgI{Bw
+zK7cX$J`_aw%1A}{*5sM?&x|}1pbNweic|FTiSjC)(}i=0!cq^BLa~Qvq11y?m{NLB
+zzsTNcuAz?y7@`?*iV2LsAje_y8Np5YZAvH1U>1;yNrY6)5|N5&qEa!BB5CG)nl(DP
+zUS*oA!ExD|q~equWOzmXAc0%R`Ud4ogRh8uzBJHeG9B7Hj|IPZhpKsyChs9Qeu{dg
+zr9;N6y4+Lq_Y}At3K9*1%!Y#82?vP=LFTDvVF1X453(2vq69$}LqYC_gD63eJoOX?
+zfTVqpd!Zm|5Tq0ek_!h>gCHx^vpN7I<Acx#?t2|m4bR#A4(-i3Vky0kA^yMg5l<yN
+i9c68JT46oxX_a*HV;>`Zj0Shu_+y9N%N>?vRq;1WXcHI!
+
+diff --git target/classes/com/cn/flyCinema/entity/Movie.class target/classes/com/cn/flyCinema/entity/Movie.class
+index 9647562420f73cb83a14f01f452347e4f070fa24..107dbe30e607938fcd67448084115f396fd88379
+GIT binary patch
+literal 3764
+zc$~$RZFAd15XV=sEz7o=1m~%4lg5Q4wpFL5g|@V*3r*ZYN|HY0fu>MEu~kRGmQqPh
+zNf`J{bOxt0(BU=12jOEd>`G_Zxt#l!H+!qS-M!!a?|lCI-{1cPfREuQ3DfX20T*DK
+z%ri1yllg|sb28tO`Hsx@WOOn+WU6tfCE*M_RluO}1(~`6yEK{#>?!br0u2S43Rnu*
+z3hXQJQUQnN-8gu0Xh{%hnl%YVR`&D*z0}aHdTH76jJn}0ND#I3rXfMPXL8+hOskG_
+zO3iePs%JYAr1l-#)9bcnx*isJhx=G0J4W5KElhNG?N^>jja1X}9J|)4dj3qzt=bOP
+zzhbv`8V2@{n9VvitLYwQ3<nu4&uo+`7{Ph@wrQE(9Zbv@wlHzYu3_TPifI{Zt>%v5
+zZ0OjCn%h;qv86jEeY0TH+cjMYrdO(VvsAT8FB*qSSlHA{hUJ;wVQJMqFlm*)@&aK_
+z%ke)&m{|RCx^j_1a^3J&>8!`{1>tGSE=w2}ZJJudvBjEyB}Py52rot4?IeulPtQ|}
+z6t<{zZ;sphHHdSMdau%;%LNEv!@pj%Qs5;p_JrNFgxmFLrS<UY(MsK~A)H%2aTkYN
+zKB7>4a6wP*HoT&W8)lr?E=%Z$zDyUH#PuE8LdCz-=}y<)YfbwKrbqIkQ&c=VP*Z~B
+zy4`ZB#(k4+bke`Em#IR95`3sa7A~srK763U44GLnb7XR4@?;8RG`OTfk-T}hEWreS
+zY>O?kQ8S#*5<lU4QC8sqUXl3`iHcczCdxVbKExk+G23|>$~hFanC*EUD1rs_M39>-
+zW`k#fKCrO!RM6*eG28oGuuA{QD5Fj|+pJR%J$fXNX%lWsF!j!#G`8*T@8QlKV&d88
+z`}>B47k^%KX-|ciAPZc6(CwZ1lli6o({K^r^lAK8NWlOd9(n_Ge*QSa##uJbu`$QS
+zJR1va#6$JRBKyXp#W4dC-3_!?@arQSB^+bg8<1Z6X;;xEaRf+16h<)xKn;@c&*~bE
+z)Zlv1KvFSN#aM+JXqVbBpcUH?(dOF_)iTjGcFx4wAZr=94RI|KZ-b&`lr|)^Ori}*
+zEt70RO3S3$pmx{4j{i;o<GB6=B;YIzBK8QJLwg?OnM4VuaB~-sU>a_qP-T>A356oo
+zqkxC8l1D;HzDH6H_#TNF@ja3=>U$(;%=buA+4o4)xbKmyitmxI3Ev}WlfFmdrf`)T
+z@ClQ)6iWLW4E!2yP4<JcLRoLZEmnL7vk6r8CFKvMfHj)mVLZqRH!HKvO0WR81t1X~
+zWL^kTMgRdwga^5THCOw9kk+*Dr$Ue@4{}Wi@|hSU%7fg*np=H9W*Ep_AxMk|DGNas
+z#UL>r<Sy1M_5qn?AWK3JnFqNi1gVHYWFBN0Yaa9gnPVXLgdlMqWK{@qUknoGK^|kx
+zlRh9h2J*QOMBza;g&<#uK@=Wj8*85R0m(CvWg$p{2YD_8c_0Q!@E|(Y?DPRCFpw`{
+zMF5iIK@1_tDy)e>l01lsHG6$P=#is^9|{#o@gPkh$Rn{LDIVk{);N7YicFEmc#BSh
+zs60qZ2(k_vA`q1aImDWyJ|OhO)54pfBL83xt@HK|IJ5l*2Gc{wFig+=F}#;f2Yv*H
+z;oLEdq(_55Gz^Rdfmj$A4+3%+m<R&#FmN^qC}AKI1QKE3To6bS!uh~Yg_Dy(K*h=7
+WpD}O@Q@nn^^yv3C)Njkr`szQHt!u&n
+
+diff --git target/classes/com/cn/flyCinema/entity/Schedule.class target/classes/com/cn/flyCinema/entity/Schedule.class
+index 32675a55536f121f4e88f55b2f00233504fc308b..ec70dac0b42df55236208ae9e97eff9dc48cddeb
+GIT binary patch
+literal 2925
+zc$}4#?{eEj5WrWqES(*-Nu7Unn@}fhu%kE?kU)XNDbyw<)J+NwDWw6b$ih{}e=@er
+zOow6m61)W8U<Ri%Wrhdf6Hmmjdy*CBaxTM{-PPXi-f#Er^w&SH{se$^a8r<hog`d_
+z&q&-OQ6X`k#4d?F5)VjxuEQ58NWl(+D(QU^Uotpg@Q}e*3?7l=YX*-Q95VQZzP{Dr
+zI~|@V5bt_51tu%c>>q5aVYlkmPRn=eZf67699oMvNvbv5cNLfj0(-vKu*&GcDAo6x
+zxRM?!QT01st4?bzo7NJ?9nTSB%I)4!gYp@D_Ut;YYnxun^S5x%{PF>2m)bS-j#s>v
+zyW49Xxt)C*bEr<+u^R_=$D{Aisrpa7t^$h{r`@!imi2w(c?lDnw&k{b&wp-Jou_WC
+z$M^g>FKPJyxK0OfzU|j~!nV)HP{Uf?^{X`P>HM<vM6_-gFe7VVP@+T;6dD-lxj*o5
+zLq|`UA7^^7&+vij-NEu?UR<RuD1D!w`P3QA=+vn|5HOvWH%cXT`PHD<z+&io5Zsfq
+zbx&_fH;On@I1He|V_2jT-KVkc@E7yj0fGXlYP;8Q+-;98&V|9nxJe}qcoT94T!E_w
+z%#oNU@djKoAPWlyERwhmHw;*U1qEis{_ga=M$PREmHiQ)SkV9*jz~Co5QQwhtRgp>
+z+|UbIdS7U<LYCfBF-NgA{!MSFnByjYM;K)kvV&Jck=uaN$^O^9$JcubyLa@=b$mpy
+zkB{9JZnP>ps&lTeyA2^esP@|UxqNB#GA!VKEQ7y31~D2vS}~eF*YlyqGvFGJf$POk
+z<6&^U#J?v&p%X-z$FDWi3hIRU5|rO~*fPo#YJhQ2;S!i=89@-NKmj!sSPcvOjgd*z
+z?@$4Ar4KQ)(1*CW+6UFlsC}%QN%TQ8Gg=>XGo$x`nHkoH<mqlE?nhuMOku5QxCk@&
+zHH!^j#+EV&eg${F3U6b}L~|JI7}AhMBT=|TLy2*V#uDci4Myb_jV8e@8ji*-8jsE`
+z8W6)eH^B<Kv!e0*4zXV&V2wMkNk{V*Vg|`u7)>Y|AB#BL>zH$cSC|Q+qIR^f9R-nO
+zAaM~SCk0uPgTzIU70fA&0GSIx)}<h-2x3V=-j#!>BFGx%td9Vh4?*68TN03j2y#mb
+z@;-bZ14)P=8<?{>0)*}oZTuldod?lGklRv_O(@DhG!dkPIpq-`bd_o2Eh&gDg4~sY
+z+?IprBFH_=sf++w3_(7Ek0l^X1lf~<+`(QYAWQ_QV$S{u5PHb8aalT%qzLj*3i643
+zB1sYCG3FeO09gtrvK@i^f-$tui$5Us=p~G$jT5*)|CAHBm>v)8IN1|{t&)8yuoGmb
+v16xBikvoCO^i<%`Bgb^$U=%$Q*vY}-#7`(rU{)N#lc5p3h(>UiM}7J)XU5tN
+
+diff --git target/classes/com/cn/flyCinema/entity/Seating.class target/classes/com/cn/flyCinema/entity/Seating.class
+index c51143fde9cc310e603c844ecb6164dc21736a0e..69f67dec0cae9be340105c66a757662147ae6a14
+GIT binary patch
+literal 1801
+zc$}4!ZBNrs6vzMF+O2E_#@KigWhlxv1_c41cu-j|AtCr;hQya;tFvUZWGg1bnD~)2
+zaU;>h58#I~o^x9ZmQLfFbI!dz=YM|Z<o3tUuipWzp_;-7^Z{hB%w~nneKxB}tfi2E
+zu40}212zv;JW}yk#S=blu-QyvD~W9hF{>eAbpP0RXXq`%Zt8osYc|dHhJ<*BzbSRc
+zX_HqwX3MO*CWYB6={2`)*-gq$Y+APElHx%zLhZk=eBIKa1i9)oObNsLmTexKogA6%
+zSH@AxWDcipv<{87#b^IgcHdeZ3A6ik=R~jD`kU5yl?qP`-LzfHJ=bfd;d;pNBFigH
+z)7_(~^2Ji*8kCOreJpA&7D$jljaQZE_<>3{)nIME!!+jwOU(VzE?8r_b2TYnj9!WA
+zI^Ib_s^*-v>*foKhu8e!mbgm81ZFg3F{&ZQCeLOJ;}XWhsyk;^t6{dOzpwD#YHVqE
+zif3$|(`=OjJ%=r7T`7ncL7_%>KI+yy=j~{ypd?}DAG?>3xdeE5bW9S|!8koNZ5nzp
+zYUpcMKJi8<-&6Z*{&cb0|1)OkFB+krOh$}XM^TKoCw$)bv_tY~NVMTevQu>WNcRf)
+zsqzJ+@<JD}a;1xSd9e$*JSlgfd=|AgIEVf~V1Rn0$fhv_jg$vTYY5Zg2Nz1XiCch(
+zm_!m0v&2NiG;t9zk1S|re417AoUbs=W#g169j4?F(Ma=>{6-QAG`=UG2LfLZ`xFQy
+z#APnB_%`nN#oLt4jS^xH;r0_$Gbt3tysTi(gg>W*xk!+B7-TvU<Zd)bJPcBxn%O=e
+zIUnR+B#0aanTrIOj|P#$AVsPv^#RHIAVtc!4x)rXDv=;%EJT4QVUT62S?L49kBl2v
+z0uYCCxX<o4Bwk-2nN@oj;P=u)Dx3D=ILDe7%N!4Su|h60-@{Pm1DPI%!-K3}8DuvY
+JWKm=-{Q`?CEN}n-
+
+diff --git target/classes/com/cn/flyCinema/entity/User.class target/classes/com/cn/flyCinema/entity/User.class
+index 7ef9b8f2c8e16d7dd055b470ff764f93fd1dcba5..e1c51ae6a746af9813991f1e4b9932bf78820b74
+GIT binary patch
+literal 3105
+zc$}S;ZFAd15P(;HkxsH{jT0wz2(9z(s7_29D5a@W8n>Y@AuV+iXbT0|QCtPTWGopb
+z!|+@Bk*_d=(;1lIJNyoQ2h-itSvKl9Gw@}1Z*{x(?CzcY*FV4g0RZpAfdTKp9UZ3N
+zE{S_2?vvOi@hOQN5)Vi`B=MOBj|@n_9R?NBk4fw@*dzTpgD)67Vepi}GX`HW_=>@E
+z`tr2~-)LYd5bZkq3XE+ZTHjg4hSjPU@3uU<Zg<udU|rYlw5+DBKze9H#p^h&I(<K~
+zT=)BS2NOiCI__dsr{lfYw~iHv+fB=9D4@EY<#k;JVzu@@Zqbgc<EGv6@XK|l<#-zy
+zn_u3;?`8h|?6%Xgce>50-Fa+P8~o^Y&1&pf9f#J!8S`E^nDqR1t=%lvTE&CLaTx=f
+zRuOYM-f?l)<t6--msIv<EvI_^XV`!6Q2oqn`zr;;^UJb!t99GkrD<jU^?fie)fF2i
+zWL4842}%(RHQ^4gGI==|#XJlKO)-NNA>E|O)6v|Z-J8KJpxuKN!*93!Yr)*W)X`fJ
+zmqd35wuXNHPH1l5GB}I4K!!WKsI<GCn!V-F?a-;JRjMWlOOQ{(G`yRH^Kc;vITACp
+zoF!|H#5{=w5{qy_fyr<iHoHz^-|mRKKj4cgC7}v664-=fA=iH>r6uy&+}D2`r6p`n
+zA%_p7#Qps@LVmrF<L`uQqmc983N2V6NAHEq1f}9tQuZRer@-`Sw_btNpnwO}L%T+g
+z%{n@=TL`-%oAMhjQSo|czn|^Y{nPpK=+D^rDg1#0&>=!IK`TOI;W{VujPTEj^_<Z2
+zLN5rt$aMx38ZpXcT&<y2P{++zp!~wOnJ5j^0B0ZuDY%GM(%%FHSV2t*Rz-rpai@X$
+zDkU&4_8?*wdJr{NdJr?Su^wj5#(SWeS+xh6nbms0%q;7HZf5l!7=trc@mCfgjc1Nw
+zx#M_x2CWIm!X$#9!!okSG6k2gAs=Ehi0i;VTX2y@O;Wf;ZHjP<8WrUhwJOFfYF3<E
+z)Gn1<)G&=()H22`YMPE2@fwMW|HQ0x!pq+w@#GaG({G)?8S__&oWR+1%D1DaQcEZB
+zb~^1lVu54Kcf@J;xNob$$BggL0>^~!V1Z-Ocj$rRobNFDj?|ARP9Xbp&{&n@=7t9O
+zG8p6~xGc&l1~&mq2?wuAZ^0V=0sFxlxSM*d@*5DoN0%{Xjc1tfcLnoO#k>^wAn5Nf
+zNHh#`MGA5SFN6dn8V0$BG3z5h=(^CsSEV4aFvx}!<RdvqEDW-VG35~;IRSD_I+}PG
+zWJ?ONE+0)i3~~=+?vDVO5u>>-?T8u%*^z>j<Q-ANAdfJnG6G~)bYw#cqJ=^Bq#!rs
+zAX*sYDaJe-0Wv2*K9+*8FvxQ$$W1v23xiZKrZxg(UVv;$LG&=lffS@H2hqbIhZyti
+j2#^H<a!U$ggh5(TklS()BMj2P7<UB7q5#?AF`v8!gyZYu
+
+diff --git target/classes/com/cn/flyCinema/service/UserService.class target/classes/com/cn/flyCinema/service/UserService.class
+index 217e71be60a1a95baeec070cd5e0a69f851353d2..551cf7fa3938d510c6810917341c5b879f7a73d4
+GIT binary patch
+literal 388
+zc$|%oJ#GRq5QX3Hvr8ZWnj8Qr1vGI(M@LX9q!cSC=o~YwjCM_A%u0K;6gdEgiefK{
+zKq88m!cXJ*=FQCU`|}IH82uRC7(GI3qs@A;XG@q3=UZ7wkx7$^#93|9$@R}@u6DUl
+zMr^Y3MH|kgVB@qaMR1uA>XuW&VE8{bS`m7`v!~_4$eam}f2<J5=<u<Yj&HDCdRQu_
+z3lF!G-N7n;)tOKFp`NfUwBqM5gz$7_wLjIx1?xM{E4{sMS-FTns3AnN;SWXw@Y+OF
+UX^d8-cW77I3AyjM_iqgkKkZ3sR{#J2
+
+diff --git target/classes/com/cn/flyCinema/service/impl/UserServiceImpl.class target/classes/com/cn/flyCinema/service/impl/UserServiceImpl.class
+index 9bc0aeba28a646b713a8a30f901ced00101027a9..29fbe0680bac7cd8ab0e7786169d669ffa49db72
+GIT binary patch
+literal 2405
+zc$}40NmCm~6#jZ7GeR0R0Rj`k65H%z2zG+mgu`M-36h;)aO^D3FdAU6G^0o(Vs1I*
+zl&YL_^C`)JLsB8a4pqr9Rrw#L@*}dn?imXi#!C(}-TmI{?|pCS?mzzd<yQcgPza*~
+z2^n)?NJ!M;EUrZG7Un}(2x9_^VJzV)pIzhPw`C;5h#(QdJA8bXYnDSu@kN?1u7_|V
+zjQ8+9H(!x)laH(Xw<hD3j1OeoW{^r5hOTAZ&Z)YkZe({COv}h=YDTlw)uK^Y)a+@7
+zni<nFodiQ*U~r8gxL{`thK6ObO_y@(M&YKmo+U|i+19n}npQCR+7kwyEwjj=o_0d`
+zJEm@^W-gx<-d0>elGfxkv|(BqE@oI9Sl-rlG&QSPo9c>FFs;q$(~`l{E)2^tom~OW
+z5lb{$T24?swVm{NtyuirE>KQ_CE?g7HBUnZ3dSZw@4)lz2JbMO(e0AuFt8-giE*E%
+zbt{gh-%DwEkt!Kv)$k<f`Q25QX{%4{9FK8bm1^m}ZsZ-)wx(r#NHr_vGn!+(1UIT^
+zjix*14lkB2N*i9WO9kDyYVrcMoG8sG_o<)@-3%9eJEu}mY9GEsK__07@sWa$(MQbF
+z3O>PI8J{Z9u&zMIT?HACueOt+&X>$=hF4;0M(f!s7#p+wTaJ^TQq?T)wJp2oOkEzE
+z7^`ByE2p{v&GB$%6>MNr!4}r3?)`~B_rHDo^}*3^UmWcp&Zt^Kfyqg1b9F7j9R2kD
+z<1fFGaZf=OIRzGMhGw5cE68I~!4y7Yi2twdW@tRdyS~0{=+q78p9xX5`>CC7iWoYd
+zS71MN)$wLfs#@*_rJ!gy)R#`F_>A78e(5@eSaM8?vSemfX~H0H8V+Ak_Y4gB9W|M}
+zxYvlRWxP}V!cI-{PR-{Hi*Vz9)J}=K_L+7Wxeh~){UmWA5-#O5&bZq@q!cN6NR*6F
+zksPOl@#IV0NB-xw{y5!falprYBYDBS6Lyccn>gPxCDBWdNCy~Rp-<vRkRF;En$yXp
+ze-Et^2+#~@96A6SI)rrl0D+$o{E=i5?Faa4#Q#BhS6-u;;@aaJ&eKR20Qx+vJA@Ua
+zv3_VD!QqidI1@lR{=*5RdO~OrNJFl*hs0<77!c_77^Im*mJ(SF3yvd*dw$BEpX6|~
+zrVM%bAwp%;3a5_{mN0vW2!)|U>&mDfE~9~lXe0f~XiC#M8jm(VM9ZztZy*Q1Lol#M
+zU;#m~gVF=E(7zRRh@l;A^fI?&juLrHIa#5c6!aKbypB<*ME4Ty93%1pl7Lbs{f%o(
+z#`qPw^>C5YZVV5|G(cm_qunYYHS#-UY%jQ%B0`eLaWhe9LR5^^1iJ~ihqBm9+H<76
+zK$QC`1S1FuS`tYmyn#0bTC74k=H;0aY=`t0nq*A;%UeXoS)vN!8>8iAOnPh=2!Ufn
+zJhp8TPBuuK#!*2b=9*UAMZ6r*4PFV~@WOBP0Nbf*KIL$s#|h%1fbMZORiIljEh32s
+U=REy9rVx**nTd?g2%5A10kBXli~s-t
+
+diff --git target/classes/com/cn/flyCinema/web/filter/LoginFilter.class target/classes/com/cn/flyCinema/web/filter/LoginFilter.class
+index 4db872cfba56b78bd400debb069c43749bf35847..1b393fef7d60923dba7fb610a4f00dddeac43e29
+GIT binary patch
+literal 2363
+zc$}qHOK%%h6#lMX*N;g9c@%~=ElKmRlP1##q^XmZ1k=(|H-Wgg&;VuZOq^+*8P^`C
+zt=J(JtWhNdOBS$V!6qmys;+`y0e^xYfe@m6GfrIBc1$It<lb}7>wf1u=i2`DpPwEA
+zcm??=y78LCd<;G;xXbHdjK`3|8xj}7n26#eE=D2orYl`?Etg}^@Rr0CiL}I3fzX_3
+zna+6ue>{;D2&C*)L!ditTE=2^BWIMa>A4~`J!w0y7qfcVbkDoWfU|B^1QO}Iy`kkT
+zZLN4e#lQ_+yKCgMHM8g#Wi4$NOzWa2&kD#@qvDk9`vT!ryQURbiKlProBBPiVw5+F
+zhNER_`?7JTO843Qtd){&Rg7kHEo*9BH?3K>rcmCtZ<~aBsL65NaY|asGZLA<Y}^qz
+z(isVBF7sM}qyK?PAeeU%wBFhXk9?GCnFYq$p}WMT1%j*<MCK2#bSx=yvr2=dZ+H!K
+zJ+-246|{^~Hm!o^P|_=vyLNe%{dnRVexmKlIC}o}RlVf3Tw+mTN#bpZQHgg1q8IMv
+zjgn)sW{G8q3<+`viUc+HbhmEXS~ClKeQ{-0(aDo{WbA4=Z%|8U&ozwGlp7|XE>|tb
+z+%U3c#U#cB%d#EagCsEAlv=MFwd+Q%K9#{uy;x;-pEj=GdGrX3JX13iT*JExvbZks
+zo`Uyrg9w{>R<ME(6nuz}6x?*BkD)72kz>!F@!>p`bt!kt$dlo|cC3-jP6I43&~a|b
+z=DyR~Vrv*SKAg6B>*FEN>s4Ud+U2DNZM0xGsl9PN5>Ip<XxBSqR4QKRP&~2!lkt3J
+zTVOSN2q;Xs;IL7-s>3oy<E`%`k!~j6eT0l#^j=F}JkjoLg~+&GWL5p~*7yVmCCm)j
+z+T1CXr$CIg0nsK0-_ZR3`{YbyF^B{F8sUKPJ0-xK)6cb+Cyl${9vuG>;s**o^l=S&
+z$}aSCRca16h!?mEyjTyO@Xlxr>~07Y^*|Lb(TjoN5BP})_<iCLe93?s*oI#q8FYmJ
+zKgNRF2>I{`G8x)ah3hIQl3|gIsKFgvQG>~-8htn&^G_@NN`LGd%&5_R<y5ju?b<@5
+zC%A>^SBScYSTbDGg&TE|&lK_9<Db>=4(8Oz4$i1yHRL%=su5Ls(y=-$HM9-Ik2)q*
+zdgsZB<J;)+!==IR(Xi<8(?dFXNk$)rNXV-sVun=AlEHbBaf5Uea0nI#@ClCKQ|dma
+z=NCAJZ!wH5j9>?G{Dy=_X9+RJ#2ImzogsO<#JbV|<Ao<3#mgkwl?Iv1PXxa(-!R+W
+zP4-4G%1#d9dyFwth?u@+_Bek&%-~CmQwkH`19mo!2#zz)Sp**=jV_4;5|a{B5}Jfh
+z;)H~3_&XtZ|KAvtIQbWP|3vT{PI>d-!)gAG5xi=;)_qFwAhwLnlvn4$nz3G;z!{<w
+cUOIPpPt$(Zi%b$LI7k9>{6Dt>QNj6t0no)y`Tzg`
+
+diff --git target/classes/com/cn/flyCinema/web/servlet/UserServlet.class target/classes/com/cn/flyCinema/web/servlet/UserServlet.class
+index f5b407d1637a6a812c14e382f2f51b52edc16f08..2953115ac54eb08d5fd83eb3c1b012cf404888d1
+GIT binary patch
+literal 5430
+zc$}42dwd*K75-+k$!s=5A4}7ADTFqJHqE2kVyT$)VH+p}^C)SX(iW+c%_Nz2U+m1L
+zsr5lYD=HvpMT##_utlY{Qc^<@swfDGZ&bv$rfF5czx@gLotepGn}jC(lAU|z-gD3M
+zJLlec{*A|<1h5?c31bcRs`x+{0qiZtYJ5<|hr%dyUp^c{dkMO6a|l~Xun)J$%B>-M
+zM8=PXupxx~VQk08RNNLu89p9H1fLM<lS17td+!kH&Jy(CQ}TLO3GT+HL%2Rn`JYj7
+zK)CnH%4fs42cJ`MZy4n`sN%jbDsWKLem;aRgz!a?@g)^s4x>tT^x%G>9uR?Fk;hk6
+zJQ&7O?3KquA$(27L&A7iq&zH-uZLjE_>B<0DJzeJa3qYQ_?C)eD!#2Ckh2slY>KCo
+zv3M%hmDtl@ri`Q>vy5!788>2^No;iKdIdo<)s<FIF`nN@*`~cG)@E3_gxyFkau=;M
+zQ>MLIK|$r>c5ZG+cNz+&H*rTxF4<vZH|ZS-&P1BhaXrzlXH9wcCWCg5Nz<yvtJ-aJ
+zIOZh`+c%Fi6&C0C+LZ1#QwrKDn|A8GdY{kQW80b7HGFvdZN^PG!?NoqWwSErlx5V5
+z3&lG`LrPE5z<CpGY)GefnG&hu9U0xScBiwQr1hMg_RNYnyJ87F)g9YtXU$YMnboXo
+zi-JW{G+IF@>lvnCa!)-MxNFq@P@aJaF-~HspzJMkE9(?--bP!G?`qaFPNGyisvvw-
+zU);#pCY7i-?)cN~N>iw)JkRCEM8fFS6Kmsf!?OHclv<m|lr_2%M%<1yrg{ksVc4W+
+zyA3;^KbUjm7n)X^(M>(u2)Cr3$;f1_<3g8i*+#Z6nTYMAy;eFE>(p(%!%TI?T03@9
+zezU_~ui`Nk{VGn-ZqxG86g2uwrlYu_$B6H8T?uw2bZQFcGL&Pua|Ki>h<0qx*=8a}
+zp|o!H*@)hg8A0`mvsqV;N5l5<Q>&$x^tf&IN?pXADhh8*=dy8Qy(v;><dwk^*{&ek
+zmSfhEM!RX5)Vwy8O508-SyPve!He!M#<mz8qvcfCt0!_4uf`<Uu__H$;wpysEt`dz
+z%p~$VMkC)fyc=r?g2_9EhIMGr@Er`OcwECEp3v}JJgH#r@PWgpZaXn_*Bz&ByJzU=
+z{^9%gojGvu^wFalp2A55(C|HcpFY23L27s!KM?bOsNor*p2d$eJSWuiIH}>s_=$!W
+z@KY5()9`crLc=fdD+L#xs}wZ+8ZWB&jfUUicM9fD267EAN%X4U2F^A79xp4<PCa^f
+zX#ed)4<0*x{2^8-ahovR4Y8dBc741@&sv7PDra}qUZLR+5|rw<Q3D$Oh(BrgGybCC
+zulSpWzl(%9V}ZCXXC^v@`yUumP!e;x#*!X8$t0hWSPn}pPveY+f8t*nES#Yf+vt;A
+zBokxJ{5M|VQF7*%Bg03IoqFo#Q^yBg4_|v?-|2k^h94aqKJviuUHgabzE{Po8eS8d
+zDyMoHOvbuSw+x?k##m1koIg6{r-PL<rS8lFb!rWHM2(q_HMZud(FlSKdX{b4mM*if
+za(qu%JkdE)F_mMSoxh6!a2wc_6NsKj*(7Iz%CxR`+GDVCn;euSoVY5RO=p`ePL@vO
+z0J(}7FFj$6VQ`UIznCq(gn`)XpIEahC-i#J)O=`n#cdcp^=M<W-nX_}x@u*kFiayu
+zLpmjp-Jsh&u467$tao<0&4d*=;fd>={URq!IU8C0PBzOuvnRxZ!$T*^&dotg(2}(_
+zed);A#-vV<#89qX*IKfF)s$}u6N{OikI7~^_GXTxBk$l_n9g>`^o$<wF=E6_k^*BL
+zhMp1@E4Gf*W})Qvk<R22y0}s?LGs54b_~eSN!z)6Y|83_<ASUl{R=A3jZVSQG|S6t
+z%9g{}^`<pvXL1ynHS{D)dt8>hxa70Z!|?8`X&deC$yn`~&H_G*ZQ>A0S?8s2va<Ge
+z(%7t#O!pdjTZ^P^r-<R&DYXW#am)SBPLFgr0xH$nW^|faYN3*mrm$|$X1ClXtXjEe
+zxi_FGL|$&p^m&U!jLl}w2w)hl4U$ZEp+2t-=1ued;e;9s_~o>QpKk&F@h;&|yeV)D
+zL6Iv7pX>S7i~>@?ys8sWss<6*dIANHAxN^2WYJ?#k2#yK=5rdEf%6f>EKEl!u7O-5
+zob71DwHy_^2TkOrXyqmH6?5*@>PTn+#R0TbN5T$K7pyvtU~M!wfRX~#6-Eo6#T-tl
+z1^v)ujGWhxX@~Ggb!57`p(tAP4C2wE$c%o>yboIk5!o6EMGO0J{t3*gQ=Rv)yqC&*
+zD5}n!M%LNUkT<H;1DK<rA9JH2pR9?}uxJ1^QPmkmb&w{I;R1ejxbg=uuK?bRt08~p
+z!f2uMT2&*P`*D#(tH6oYHq7R8E@Kd7%r0O`=3yZ&#1dSDI?QJh7GNVTL7bnk7FYIS
+z5pKm|+{q8tgQ&p+sKvvG;TXSApT;u0h|741SdLe4xfA&tC^^nZH=_kAC9FUzsSxGf
+zj}5pEMG|{2FG96Zo8nNLu$eh3#t_=cS3v7t#uidRTJ!?0$5wv1ZzJa%6uf~t72BQv
+zvi~7P;=eTh1}+9E?7jTm=qFsKD3vS8L6i|Y7q`?hNb?n5P8S?vQi4&&_L4&gyVRu)
+z1_rP&fE7UxZ32Z-$v|oFJ}}skMZ`f(q;dd@1H9W-k*8X)P&0rUUR{}t+GA86LWF26
+zcgBkuO*j7QF_X_LI9td0HRPzLM=P0uHRM|5l*mFB$7L*!dKQP2$JLBp3wO4Y+QBF%
+z7{8HN&tX({;C)V%gwjdTSwF%_Kf*~b!XX&wU^EM;qn^3y<c@mMqDdr7<9ZkKB(bhQ
+z@J*T+RIyq`w~8JH9EytaMimuBuVWGELO<{(e>+D4j~;3eTjq{{asW#LIEk{Bs+w94
+zllc|g#K<($pBBfrDtE8%$6Vi!xt<?0nO4`2{KW6_^=G*va%)EQ$5>T^SjvPg8!5NT
+zBJbd%AIk@Dc>rT=x(?@2Z#6ZGP4iuOzD+g0O*NiP`IaPnOP=GtLXJ!Qp5vixg`iAI
+zRFI_x4<YFEn(<XT+u7gFd~abowh|%RScBUgtCqX6eXExGRxR~wYLQn{rL6X(lX1!J
+zG6dcvKnwG-yIqm=7QV^VG1CD~D`z>F@*TW~qZm={mR5^bYEn|QtTXXe+Uh&q0Oz}O
+zBa^rTGYH_>gzf?+bkwDC-=%WjrE<?Dm5!v5p{yA!BY{B>H+hZUUCWLEhBYo7t<{k$
+z&PvC-Bpo%8I;XHpg9lM@ZnPX?8yEl&y~xUbtQvK#%xO5CjJv^zcd@f})9@bF*G{54
+zk>_Ho?_#U(VymCE^{~CH)#YU^jKJ$?ker0`DldSXgWX>2cF?P!kH0<Jp;&nT{{a^k
+Be#QU*
+
+diff --git target/tomcat/logs/access_log.2020-09-14 target/tomcat/logs/access_log.2020-09-14
+deleted file mode 100644
+index e69de29bb2d1d6434b8b29ae775ad8c2e48c5391..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+Hc$@<O00001
+

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>index</title>
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/common.css">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+    <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div id="header"></div>
+<form>
+    <div class="container">
+        <div class="row">
+            <a href="index.html">首页</a> <span> &gt;</span>
+            <a href="javascript:void(0)" style="text-decoration: none">影院</a> <span> &gt;</span>
+        </div>
+        <hr size="1" width="100%" align="left" noshade>
+        <div class="row">
+            <div class="col-xs-3">
+                <div style="margin-top: 10px">选择地区</div>
+            </div>
+            <div  class="col-xs-9">
+                <div style="margin-top: 10px">
+                    <select style="width: 100px" class="form-control" id="province">
+                                            <option>----请选择城市------</option>
+
+                    </select>
+                    <select style="margin-top: 10px; width: 100px" class="form-control" id="region">
+                        <option>----选择地区------</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <hr size="1" width="100%" align="left" noshade>
+        <div class="row" id="cinema">
+
+        </div>
+    </div>
+</form>
+<hr size="1" width="100%" align="left" noshade>
+<div id="footer"></div>
+<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+<script src="js/jquery-3.3.1.js"></script>
+<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+<script src="js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/include.js"></script>
+<script>
+    $(function () {
+        //查找所有城市
+        $.post("/flyCinema/city/findAllCity", {},
+            function (list) {
+                var lis = '';
+                for (var i = 0; i < list.length; i++) {
+
+                    lis += '<option value="' + list[i].cid + '">' + list[i].name + '</option>';
+                }
+                $("#province").html(lis);
+
+                $("#province").change();
+
+            },
+            "json");
+
+        //城市框内容改变查找所有地区，并添加到选项框
+        $("#province").change(function () {
+            loadArea(this.value);
+
+        });
+        //地区选项框内容改变，查找影院并显示
+        $("#region").change(function () {
+
+            loadCinema(this.value);
+        });
+
+    });
+    //加载地区
+    function loadArea(cid) {
+        $.get("/flyCinema/city/findAreaByCid",{cid:cid},function (list) {
+
+                var lis = '';
+                for (var i = 0; i < list.length ; i++) {
+                    if (i == 0){
+                        loadCinema(list[i].aid);
+                    }
+                    lis +=  '<option value="'+list[i].aid+'">'+list[i].name+'</option>';
+                }
+                $("#region").html(lis)
+
+            },
+            "json");
+    }
+    //加载影院
+    function loadCinema(aid) {
+        $.get("/flyCinema/city/findCinemaByAid",{aid:aid},
+            function (list) {
+
+                var lis = "";
+                for (var i = 0; i < list.length ; i++) {
+                    lis += '<div class="row" style="margin-bottom: 15px">';
+                    lis += '<div class="col-xs-3">';
+                    lis += '<img src="'+ list[i].img+'" width="300px"></div>';
+                    lis += '<div style="margin-left: 20px; width: 44%" class="col-xs-6">';
+                    lis += '<div><span>'+list[i].name+'</span><span style="color: red;margin-left: 20px">'+list[i].score+'分</span></div>';
+                    lis += '<div style="margin-top: 10px">';
+                    lis += '<span>地址：'+list[i].address+'</span><br>';
+                    lis += '<span>电话：'+list[i].phone+'</span><br></div></div>';
+                    lis += '<div class="col-xs-3">';
+                    lis += '<button type="button" class="btn btn-info" style="width: 160px" onclick="onClick('+list[i].cid+')">选座购票</button></div></div>';
+
+                }
+                $("#cinema").html(lis);
+            },
+            "json");
+    }
+    //选座按钮点击事件，跳转到影院详情页面
+    function onClick(cid) {
+
+        location.href = "cinedetails.html?cid="+ cid;
+    }
+
+</script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
